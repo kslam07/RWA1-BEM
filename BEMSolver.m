@@ -10,7 +10,7 @@ classdef BEMSolver
         rRotor (1,1) double {mustBeNonnegative} = 50.0;   % radius of rotor
         rTipRatio (1,1) double {mustBeNonnegative} = 1.0  % r_tip/R_rotor
         rRootRatio (1,1) double {mustBeNonnegative} = 0.2;% r_root/R_rotor
-        nSegments (1,1) double {mustBeNonnegative} = 3;   % blade segments
+        nSegments (1,1) double {mustBeNonnegative} = 10;   % blade segments
         spacing (1,:) char {mustBeMember(spacing, ["0", "1", "cosine"])}...
                 = '0';                                    % segment spacing
         nBlades (1,1) double {mustBeNonnegative} = 3;     % blades /rotors
@@ -109,11 +109,11 @@ classdef BEMSolver
             % solve problem for each annulus
             solTotal = zeros(obj.nSegments, 5);
             for i = 1:obj.nSegments
-                [rR, ai, aprimei, Azi, Axi] = solveStreamtube(obj, ...
+                [rRi, ai, aprimei, Azi, Axi] = solveStreamtube(obj, ...
                     obj.locSegment(i), obj.locSegment(i+1), ...
                     obj.rRootRatio, obj.rTipRatio, obj.rRotor, ...
                     obj.uInf, obj.Omega, obj.nBlades);
-                solTotal(i, :) = [rR, ai, aprimei, Azi, Axi];
+                solTotal(i, :) = [rRi, ai, aprimei, Azi, Axi];
             end
         end
         
@@ -131,7 +131,7 @@ classdef BEMSolver
              % nBlades  : number of rotor blades
              
              rR = (rR1 + rR2)/2;                 % center of blade segment
-             twistAngle = obj.computeTwists(rR);     % twist of blade seg.
+             twistAngle = obj.computeTwists(rR); % twist of blade seg.
              chord = obj.computeChordLength(rR);
              areaSegment = pi * ( (rR2*rRotor)^2 - (rR1*rRotor)^2);
              dR = rRotor * (rR2 - rR1);          % segment radial length
@@ -191,10 +191,9 @@ classdef BEMSolver
         
         function fTot = calcPrandtlTipCorr(rR, rRoot, rTip, TSR, nBlades, a)
             % calculate Prandtl Tip Corrections FACTORS!
-            denom = rR * sqrt(1 + (TSR*rR)^2) / (1-a)^2;
-            temp1 = -nBlades/2*(rTip-rR) / denom;
+            temp1 = -nBlades/2*(rTip-rR)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
             fTip  = 2/pi*acos(exp(temp1));
-            temp1 = nBlades/2*(rRoot-rR) / denom;
+            temp1 = -nBlades/2*(rR-rRoot)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
             fRoot = 2/pi*acos(exp(temp1));
             if isnan(fTip) == true
                 fTip = 0;
