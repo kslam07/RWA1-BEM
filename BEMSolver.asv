@@ -107,18 +107,18 @@ classdef BEMSolver
         
         function solTotal = solveRotor(obj)
             % solve problem for each annulus
-            solTotal = zeros(obj.nSegments, 5);
+            solTotal = zeros(obj.nSegments, 4);
             for i = 1:obj.nSegments
-                [rR, ai, aprimei, Azi, Axi] = solveStreamtube(obj, ...
+                [ai, aprimei, Azi, Axi] = solveStreamtube(obj, ...
                     obj.locSegment(i), obj.locSegment(i+1), ...
                     obj.rRootRatio, obj.rTipRatio, obj.rRotor, ...
                     obj.uInf, obj.Omega, obj.nBlades);
-                solTotal(i, :) = [rR, ai, aprimei, Azi, Axi];
+                solTotal(i, :) = [ai, aprimei, Azi, Axi];
             end
         end
         
-        function [rR, a, aprime, Az, Ax] = solveStreamtube(obj, rR1, ...
-                  rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
+        function [a, aprime, Az, Ax] = solveStreamtube(obj, rR1, rR2, ...
+                  rRoot, rTip, rRotor, uInf, Omega, nBlades)
              % solve balance of momentum between blade element load and
              % loading in the streamtube
              % rR1      : location of inner boundary of blade segment 
@@ -157,8 +157,7 @@ classdef BEMSolver
                  a = 0.75*a+0.25*a_ip1/fTot;
                  
                  % compute new iterant a'
-                 aprime = Az/(4*pi*uInf*(1-a)*Omega*(rR*rRotor)^2*...
-                          obj.rho)/fTot;
+                 aprime = Az/(4*pi*uInf*(1-a)*Omega*(rR*rRotor)^2)/fTot;
                  
                  % control bounds
                  if a_ip1 > 0.95
