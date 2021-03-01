@@ -4,7 +4,7 @@ a = BEMSolver;
 a.nBlades = 3;
 a.TSR = 6;
 a.nSegments = 50;
-a.spacing = "cosine";
+a.spacing = "0";
 a.nBlades = 3;
 a.atol = 1e-6;
 a.nIter = 100;
@@ -18,5 +18,5 @@ results = a.solveRotor();
 
 %% post-process results
 figure
-plot(results(:,1), results(:, 2));
+plot(results(:,1), results(:, 2),results(:,1), results(:, 3));
 grid on

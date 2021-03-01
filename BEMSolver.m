@@ -135,19 +135,19 @@ classdef BEMSolver
             chord = obj.computeChordLength(rR);
             areaSegment = pi * ( (rR2*rRotor)^2 - (rR1*rRotor)^2);
             dR = rRotor * (rR2 - rR1);          % segment radial length
-            a = 0.3; aprime = 0;  % flow factors
+            a = 0.2; aprime = 0;  % flow factors
             for i = 1:obj.nIter
                 % calculate velocity and loads 
                 uRotor = uInf*(1-a);               % axial velocity
                 uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
                 uPer = norm([uRotor, uTan]);
-                qDyn = 0.5*obj.rho*uPer^2;
+%                 qDyn = 0.5*obj.rho*uPer^2;
                 [cAx, cAz] = obj.computeLoadsSegment(uRotor, uTan, ...
                                    twistAngle, obj.bladePitch, ...
                                    obj.fCL, obj.fCD);
-                Ax = cAx*qDyn*chord*dR*nBlades;
-                Az = cAz*qDyn*chord*dR*nBlades;
-                CT = Ax / (areaSegment*0.5*obj.rho*uInf^2);% thrust coeff.
+                Ax = cAx*0.5*chord*uPer^2*dR*nBlades;
+                Az = cAz*0.5*chord*uPer^2*dR*nBlades;
+                CT = Ax / (areaSegment*0.5*uInf^2);% thrust coeff.
                 
                 % compute new iterant a
                 a_ip1 = obj.calcGlauertCorr(CT);
@@ -157,7 +157,7 @@ classdef BEMSolver
                 a_ip1 = a_ip1/fTot;
                 a = 0.75*a+0.25*a_ip1;
                 % compute new iterant a'
-                aprime = Az/(2*2*pi*obj.rho*(rR*rRotor)*uInf^2*(1-a)* ...
+                aprime = Az/(2*pi*(rR*rRotor)^2*uInf*obj.Omega^2*(1-a)* ...
                          obj.TSR*rR)/dR/fTot;
 
                 % control bounds
@@ -197,13 +197,10 @@ classdef BEMSolver
             fTip  = 2/pi*acos(exp(temp1));
             temp1 = -nBlades/2*(rR-rRoot)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
             fRoot = 2/pi*acos(exp(temp1));
-            if isnan(fTip) == true
-                fTip = 0;
-            end
-            if isnan(fRoot) == true
-                fRoot = 0;
-            end
             fTot = fRoot*fTip;
+            if fTot < 1e-4
+                fTot = 1e-4  % avoide divide by zero or blow-up
+            end
         end
 
         function anew = calcGlauertCorr(CT)
