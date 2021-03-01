@@ -157,7 +157,7 @@ classdef BEMSolver
                 a_ip1 = a_ip1/fTot;
                 a = 0.75*a+0.25*a_ip1;
                 % compute new iterant a'
-                aprime = Az/(2*2*pi*(rR*rRotor)*uInf^2*(1-a)* ...
+                aprime = Az/(2*2*pi*obj.rho*(rR*rRotor)*uInf^2*(1-a)* ...
                          obj.TSR*rR)/dR/fTot;
 
                 % control bounds
