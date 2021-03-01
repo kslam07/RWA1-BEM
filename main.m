@@ -2,14 +2,13 @@
 %  do this instead
 a = BEMSolver;
 a.nBlades = 3;
-a.nSegments =10;
 a.TSR = 6;
 a.nSegments = 50;
-a.spacing = '0';
+a.spacing = "cosine";
 a.nBlades = 3;
 a.atol = 1e-6;
 a.nIter = 100;
-a.bladePitch = 2;
+a.bladePitch = -2;
 
 %% Initialise some other attributes
 a = a.init();
@@ -19,5 +18,5 @@ results = a.solveRotor();
 
 %% post-process results
 figure
-plot(results(:,1), results(:, 2), results(:,1), results(:,3));
+plot(results(:,1), results(:, 2));
 grid on

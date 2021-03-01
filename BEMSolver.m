@@ -53,8 +53,8 @@ classdef BEMSolver
             % The segments are cosine space divided
             
             % Due to rotor hub, the blade starts at:
-            rStart = 0.2;  % r/R
-            rEnd = 1;  % r/R
+            rStart = obj.rRootRatio;  % r/R
+            rEnd = obj.rTipRatio;  % r/R
             
             if obj.spacing == '0'    % linear spacing
                 segmentBounds = linspace(rStart, rEnd, obj.nSegments+1);
@@ -80,8 +80,8 @@ classdef BEMSolver
             
             data = table2array(readtable(obj.airfoilFilename));
             alphaRad = deg2rad(data(:,1));
-            obj.fCL = fit(alphaRad, data(:, 2), "smoothingspline");
-            obj.fCD = fit(alphaRad, data(:, 3), "smoothingspline");
+            obj.fCL = fit(alphaRad, data(:, 2), "cubicinterp");
+            obj.fCD = fit(alphaRad, data(:, 3), "cubicinterp");
             obj.amax = max(alphaRad);
             obj.amin = min(alphaRad);
         end
@@ -119,77 +119,79 @@ classdef BEMSolver
         
         function [rR, a, aprime, Az, Ax] = solveStreamtube(obj, rR1, ...
                   rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
-             % solve balance of momentum between blade element load and
-             % loading in the streamtube
-             % rR1      : location of inner boundary of blade segment 
-             % rR2      : location of outer boundary of blade segment
-             % rRoot    : root of blade/rotor location in frac. of radius
-             % rTip     : tip of blade/rotor location in fraction of radius
-             % rRotor   : total radius of the rotor
-             % uInf     : freestream velocity
-             % Omega    : rotational velocity
-             % nBlades  : number of rotor blades
-             
-             rR = (rR1 + rR2)/2;                 % center of blade segment
-             twistAngle = obj.computeTwists(rR); % twist of blade seg.
-             chord = obj.computeChordLength(rR);
-             areaSegment = pi * ( (rR2*rRotor)^2 - (rR1*rRotor)^2);
-             dR = rRotor * (rR2 - rR1);          % segment radial length
-             a = 0.3; aprime = 0;  % flow factors
-             for i = 1:obj.nIter
-                 % calculate velocity and loads 
-                 uRotor = uInf*(1-a);               % axial velocity
-                 uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
-                 uPer = norm([uRotor, uTan]);
-                 qDyn = 0.5*obj.rho*uPer^2;
-                 [cAx, cAz] = obj.computeLoadsSegment(uRotor, uTan, ...
-                                    twistAngle, obj.bladePitch, ...
-                                    obj.fCL, obj.fCD);
-                 Ax = cAx*qDyn*chord*dR*nBlades;
-                 Az = cAz*qDyn*chord*dR*nBlades;
-                 CT = Ax / (0.5*areaSegment*uInf^2);  % thrust coefficient
-                 
-                 % compute new iterant a
-                 a_ip1 = obj.calcGlauertCorr(CT);
-                 fTot = obj.calcPrandtlTipCorr(rR, rRoot, rTip, obj.TSR,...
-                        obj.nBlades, a_ip1);
-                 % update a (scheme for stability) and aprime
-                 a = 0.75*a+0.25*a_ip1/fTot;
-                 
-                 % compute new iterant a'
-                 aprime = Az/(4*pi*uInf*(1-a)*Omega*(rR*rRotor)^2*...
-                          obj.rho)/fTot;
-                 
-                 % control bounds
-                 if a_ip1 > 0.95
-                     a_ip1 = 0.95;
-                 end
-                 
-                 if aprime < 0
-                     aprime = 0;
-                 end
-                 
-                 % finish iterating if error is below tolerance
-                 if abs(a - a_ip1) < obj.atol
-                     break;
-                 end
-             end
-             
+            % solve balance of momentum between blade element load and
+            % loading in the streamtube
+            % rR1      : location of inner boundary of blade segment 
+            % rR2      : location of outer boundary of blade segment
+            % rRoot    : root of blade/rotor location in frac. of radius
+            % rTip     : tip of blade/rotor location in fraction of radius
+            % rRotor   : total radius of the rotor
+            % uInf     : freestream velocity
+            % Omega    : rotational velocity
+            % nBlades  : number of rotor blades
+            
+            rR = (rR1 + rR2)/2;                 % center of blade segment
+            twistAngle = obj.computeTwists(rR); % twist of blade seg.
+            chord = obj.computeChordLength(rR);
+            areaSegment = pi * ( (rR2*rRotor)^2 - (rR1*rRotor)^2);
+            dR = rRotor * (rR2 - rR1);          % segment radial length
+            a = 0.3; aprime = 0;  % flow factors
+            for i = 1:obj.nIter
+                % calculate velocity and loads 
+                uRotor = uInf*(1-a);               % axial velocity
+                uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
+                uPer = norm([uRotor, uTan]);
+                qDyn = 0.5*obj.rho*uPer^2;
+                [cAx, cAz] = obj.computeLoadsSegment(uRotor, uTan, ...
+                                   twistAngle, obj.bladePitch, ...
+                                   obj.fCL, obj.fCD);
+                Ax = cAx*qDyn*chord*dR*nBlades;
+                Az = cAz*qDyn*chord*dR*nBlades;
+                CT = Ax / (areaSegment*0.5*obj.rho*uInf^2);% thrust coeff.
+                
+                % compute new iterant a
+                a_ip1 = obj.calcGlauertCorr(CT);
+                fTot = obj.calcPrandtlTipCorr(rR, rRoot, rTip, obj.TSR,...
+                       obj.nBlades, a_ip1);
+                % update a (scheme for stability) and aprime
+                a_ip1 = a_ip1/fTot;
+                a = 0.75*a+0.25*a_ip1;
+                % compute new iterant a'
+                aprime = Az/(2*2*pi*(rR*rRotor)*uInf^2*(1-a)* ...
+                         obj.TSR*rR)/dR/fTot;
+
+                % control bounds
+                if a_ip1 > 0.95
+                    a_ip1 = 0.95;
+                end
+                
+                if aprime < 0
+                    aprime = 0;
+                end                 
+                % finish iterating if error is below tolerance
+                if abs(a - a_ip1) < obj.atol
+                    break;
+                end
+            end
+    
         end
     end
     
     methods(Static)
         function chordLength = computeChordLength(rR)
+            % CHECKED
             % Determine the chord distribution for each blade segment
             chordLength = 3*(1-rR)+1;
         end
         
         function twistAngle = computeTwists(rR)
+            % CHECKED
             % Determine the twist angle distribution for each blade segment
             twistAngle = deg2rad(14*(1-rR));
         end
         
         function fTot = calcPrandtlTipCorr(rR, rRoot, rTip, TSR, nBlades, a)
+            % CHECKED
             % calculate Prandtl Tip Corrections FACTORS!
             temp1 = -nBlades/2*(rTip-rR)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
             fTip  = 2/pi*acos(exp(temp1));
@@ -203,8 +205,9 @@ classdef BEMSolver
             end
             fTot = fRoot*fTip;
         end
-        
+
         function anew = calcGlauertCorr(CT)
+            % CHECKED
             % computes the Glauert correction for heavily loaded rotors
             if CT < (2*sqrt(1.816)-1.816)
                 anew = 0.5 - sqrt(1-CT)/2;
