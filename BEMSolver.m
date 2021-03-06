@@ -88,8 +88,8 @@ classdef BEMSolver
         
         function [cAx, cAz] = computeLoadsSegment(obj, uRotor, uTan, ...
                               twistAngle, bladePitch, fCL, fCD)
-            theta = deg2rad(bladePitch);
-            phi = atan2(uRotor, uTan);              % perc. wind-flow angle
+            theta = deg2rad(bladePitch);            % blade pitch
+            phi = atan2(uRotor, uTan);              % flow angle
             alpha = phi - twistAngle - theta;       % angle of attack
             
             if alpha > obj.amax
@@ -107,18 +107,18 @@ classdef BEMSolver
         
         function solTotal = solveRotor(obj)
             % solve problem for each annulus
-            solTotal = zeros(obj.nSegments, 5);
+            solTotal = zeros(obj.nSegments, 7);
             for i = 1:obj.nSegments
-                [rRi, ai, aprimei, Azi, Axi] = solveStreamtube(obj, ...
+                [rRi, ai, aprimei, Azi, Axi, fTot, CT] = solveStreamtube(obj, ...
                     obj.locSegment(i), obj.locSegment(i+1), ...
                     obj.rRootRatio, obj.rTipRatio, obj.rRotor, ...
                     obj.uInf, obj.Omega, obj.nBlades);
-                solTotal(i, :) = [rRi, ai, aprimei, Azi, Axi];
+                solTotal(i, :) = [rRi, ai, aprimei, Azi, Axi, fTot, CT];
             end
         end
         
-        function [rR, a, aprime, Az, Ax] = solveStreamtube(obj, rR1, ...
-                  rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
+        function [rR, a, aprime, Ax, Az, fTot, CT] = solveStreamtube( ...
+                obj, rR1, rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
             % solve balance of momentum between blade element load and
             % loading in the streamtube
             % rR1      : location of inner boundary of blade segment 
@@ -135,7 +135,7 @@ classdef BEMSolver
             chord = obj.computeChordLength(rR);
             areaSegment = pi * ( (rR2*rRotor)^2 - (rR1*rRotor)^2);
             dR = rRotor * (rR2 - rR1);          % segment radial length
-            a = 0.2; aprime = 0;  % flow factors
+            a = 0.3; aprime = 0;  % flow factors
             for i = 1:obj.nIter
                 % calculate velocity and loads 
                 uRotor = uInf*(1-a);               % axial velocity
@@ -147,29 +147,30 @@ classdef BEMSolver
                                    obj.fCL, obj.fCD);
                 Ax = cAx*0.5*chord*uPer^2*dR*nBlades;
                 Az = cAz*0.5*chord*uPer^2*dR*nBlades;
-                CT = Ax / (areaSegment*0.5*uInf^2);% thrust coeff.
+                CT = Ax / (0.5*areaSegment*uInf^2);% thrust coeff.
                 
                 % compute new iterant a
                 a_ip1 = obj.calcGlauertCorr(CT);
                 fTot = obj.calcPrandtlTipCorr(rR, rRoot, rTip, obj.TSR,...
                        obj.nBlades, a_ip1);
-                % update a (scheme for stability) and aprime
                 a_ip1 = a_ip1/fTot;
+                
+                % update a (scheme for stability) and aprime
                 a = 0.75*a+0.25*a_ip1;
-                % compute new iterant a'
-                aprime = Az/(2*pi*(rR*rRotor)^2*uInf*obj.Omega^2*(1-a)* ...
-                         obj.TSR*rR)/dR/fTot;
-
-                % control bounds
-                if a_ip1 > 0.95
-                    a_ip1 = 0.95;
+                
+                % limit flow factor
+                if a > 0.95
+                    a = 0.95;
                 end
                 
-                if aprime < 0
-                    aprime = 0;
-                end                 
+                % compute new iterant a'
+                aprime_ip1 = Az*nBlades/(2*pi*uInf*(1-a)*Omega*2* ... 
+                        (rR*rRotor)^2)/fTot;
+                aprime = 0.75 * aprime + 0.25 * aprime_ip1;
+                
                 % finish iterating if error is below tolerance
-                if abs(a - a_ip1) < obj.atol
+                if abs(a - a_ip1) < obj.atol && ... 
+                   abs(aprime - aprime_ip1) < obj.atol
                     break;
                 end
             end
@@ -198,19 +199,26 @@ classdef BEMSolver
             temp1 = -nBlades/2*(rR-rRoot)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
             fRoot = 2/pi*acos(exp(temp1));
             fTot = fRoot*fTip;
-            if fTot < 1e-4
-                fTot = 1e-4  % avoide divide by zero or blow-up
+            if fTot < 1e-4 
+                fTot = 1e-4;  % avoide divide by zero or blow-up
+            elseif isnan(fTot) == true
+                fTot = 0;
             end
         end
 
-        function anew = calcGlauertCorr(CT)
+        function a = calcGlauertCorr(CT)
             % CHECKED
             % computes the Glauert correction for heavily loaded rotors
             if CT < (2*sqrt(1.816)-1.816)
-                anew = 0.5 - sqrt(1-CT)/2;
+                a = 0.5 - sqrt(1-CT)/2;
             else
-                anew = 1+(CT-1.816)/(4*sqrt(CT)-4);
+                a = 1+(CT-1.816)/(4*sqrt(1.816)-4);
             end
+        end
+        
+        function aSkew = skewWakeCorr(a, rR, gamma, psi)
+            chi = gamma*(1+0.6*a);
+            aSkew = a*(1+15*pi/32*rR*tan(chi/2).*cos(psi));
         end
     end
 end
