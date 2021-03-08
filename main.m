@@ -17,12 +17,25 @@ a = a.init();
 res = a.solveRotor();
 
 %% post-process results
-figure
-plot(res.rR, res.a, res.rR, res.aprime);
-grid on
+% figure
+% plot(res.rR, res.alpha, res.rR, res.phi);
+
+% plot(res.rR, res.a, res.rR, res.aprime);
+
+% plot(res.rR, res.CT, res.rR, res.CQ, res.rR, res.CN); % coefficients
+% legend('CT', 'CQ', 'CN')
+
+% plot(res.rR, res.Ax, res.rR, res.Az); %absolute forces
+% grid on
+% [t,r]=meshgrid(res.psi,res.rR);
+% h=polar(t, r);
+% hold on
+% contourf(t, r, res.askew)
+% set(h,'Visible','off')
+% polarplot(res.psi, res.rR, res.askew)
 
 % figure
-% plot(res.rR, res.fTot);
+% plot(res.rR, res.fTot); % crrection
 % grid on
 
 % aSkew

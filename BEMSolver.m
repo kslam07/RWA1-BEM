@@ -28,6 +28,7 @@ classdef BEMSolver
         locSegment (1, :) double;       % radial length of each blade seg.
         alphaSegment (1, :) double;     % local angle-of-attack
         phiSegment (1, :) double;       % local inflow angle
+        psiSegment                      % local azimuth angle
     end
     
     properties(Access = protected)
@@ -44,7 +45,13 @@ classdef BEMSolver
             % initialize the class object
             obj = createPolarSplines(obj);
             obj = computeSegments(obj);
+            obj = computePsiArr(obj);
             obj.Omega = obj.TSR * obj.uInf / obj.rRotor;
+        end
+        
+        function obj = computePsiArr(obj)
+            psiArr = linspace(0, 2*pi, obj.nPsi);
+            obj.psiSegment = psiArr;
         end
         
         function obj = computeSegments(obj)
@@ -88,7 +95,7 @@ classdef BEMSolver
             obj.amin = min(alphaRad);
         end
         
-        function [cAx, cAz] = computeLoadsSegment(obj, uRotor, uTan, ...
+        function [cAx, cAz, alpha] = computeLoadsSegment(obj, uRotor, uTan, ...
                               twistAngle, bladePitch, fCL, fCD)
             theta = deg2rad(bladePitch);            % blade pitch
             phi = atan2(uRotor, uTan);              % flow angle
@@ -109,7 +116,7 @@ classdef BEMSolver
         
         function solTotal = solveRotor(obj)
             % solve problem for each annulus
-            solTotalArr = zeros(obj.nSegments, 7);
+            solTotalArr = zeros(obj.nSegments, 13);
             askewTotal = zeros(obj.nSegments, obj.nPsi);
             for i = 1:obj.nSegments
                 [sol, askew] = solveStreamtube(obj, ...
@@ -122,7 +129,11 @@ classdef BEMSolver
             solTotal = struct("rR", solTotalArr(:,1), "a", solTotalArr(:,2), ...
                     "aprime", solTotalArr(:,3), "askew", askewTotal, ...
                     "nAx", solTotalArr(:,4), "nAz", solTotalArr(:,5), ...
-                    "fTot", solTotalArr(:,7), "CT", solTotalArr(:,6));
+                    "fTot", solTotalArr(:,7), "CT", solTotalArr(:,6), ...
+                    "phi", solTotalArr(:,8), "alpha", solTotalArr(:,9), ...
+                    "Ax", solTotalArr(:,10), "Az", solTotalArr(:,11),...
+                    "CN", solTotalArr(:,12), "CQ", solTotalArr(:,13),...
+                    "psi", obj.psiSegment);
             end
         end
         
@@ -145,7 +156,6 @@ classdef BEMSolver
             areaSegment = pi * ( (locOut*rRotor)^2 - (locIn*rRotor)^2);
             dR = rRotor * (locOut - locIn);     % segment radial length
             a = 0.3; aprime = 0;  % flow factors
-            psiArr = linspace(0, 2*pi, obj.nPsi);
             for i = 1:obj.nIter
                 
                 % calculate velocity and loads 
@@ -153,13 +163,15 @@ classdef BEMSolver
                 uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
                 uPer = norm([uRotor, uTan]);
 %                 qDyn = 0.5*obj.rho*uPer^2;
-                [cAx, cAz] = obj.computeLoadsSegment(uRotor, uTan, ...
+                [cAx, cAz, alpha] = obj.computeLoadsSegment(uRotor, uTan, ...
                                    twistAngle, obj.bladePitch, ...
                                    obj.fCL, obj.fCD);
                                
                 Ax = cAx*0.5*chord*uPer^2*dR*nBlades;
                 Az = cAz*0.5*chord*uPer^2*dR*nBlades;
                 CT = Ax / (0.5*areaSegment*uInf^2);% thrust coeff.
+                CQ = Az / (0.5*areaSegment*uInf^2);% torque coeff.
+                CN = CQ/rR;
                 
                 % compute new iterant a
                 a_ip1 = obj.calcGlauertCorr(CT);
@@ -192,10 +204,11 @@ classdef BEMSolver
                 end
             end
             % apply skewing factor / correction for yaw
-            askew = obj.skewWakeCorr(a, rR, obj.yawAngle, psiArr);
+            askew = obj.skewWakeCorr(a, rR, obj.yawAngle, obj.psiSegment);
             nAx = Ax/(0.5*uPer^2*dR*nBlades);
             nAz = Az/(0.5*uPer^2*dR*nBlades);
-            sol = [rR, a, aprime, nAx, nAz, CT, fTot];
+            sol = [rR, a, aprime, nAx, nAz, CT, fTot, phi, alpha, Ax, ...
+                Az, CN, CQ];
         end
     end
     
