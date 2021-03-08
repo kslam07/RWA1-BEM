@@ -1,6 +1,5 @@
-classdef BEMSolver
-    %UNTITLED4 Summary of this class goes here
-    %   Detailed explanation goes here
+classdef BEMsolverNREL
+    %BEMsolverNREL NREL's implementation of BEM
     
     % user-defined
     properties
@@ -88,7 +87,7 @@ classdef BEMSolver
             obj.amin = min(alphaRad);
         end
         
-        function [cAx, cAz] = computeLoadsSegment(obj, uRotor, uTan, ...
+        function [cl, cd] = computeLoadsSegment(obj, uRotor, uTan, ...
                               twistAngle, bladePitch, fCL, fCD)
             theta = deg2rad(bladePitch);            % blade pitch
             phi = atan2(uRotor, uTan);              % flow angle
@@ -101,10 +100,6 @@ classdef BEMSolver
             else
                 cl = fCL(alpha); cd = fCD(alpha);
             end
-            
-            % compute the normal and tangential coefficients
-            cAz = cl*sin(phi) - cd*cos(phi);
-            cAx = cl*cos(phi) + cd*sin(phi);
         end
         
         function solTotal = solveRotor(obj)
@@ -126,8 +121,8 @@ classdef BEMSolver
             end
         end
         
-        function [sol, askew] = solveStreamtube(obj, locIn, locOut, ... 
-                                rRoot, rTip, rRotor, uInf, Omega, nBlades)
+        function [sol, askew] = solveStreamtube( ...
+                obj, rR1, rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
             % solve balance of momentum between blade element load and
             % loading in the streamtube
             % rR1      : location of inner boundary of blade segment 
@@ -139,11 +134,9 @@ classdef BEMSolver
             % Omega    : rotational velocity
             % nBlades  : number of rotor blades
             
-            rR = (locIn + locOut)/2;            % center of blade segment
+            rR = (rR1 + rR2)/2;                 % center of blade segment
             twistAngle = obj.computeTwists(rR); % twist of blade seg.
             chord = obj.computeChordLength(rR);
-            areaSegment = pi * ( (locOut*rRotor)^2 - (locIn*rRotor)^2);
-            dR = rRotor * (locOut - locIn);     % segment radial length
             a = 0.3; aprime = 0;  % flow factors
             psiArr = linspace(0, 2*pi, obj.nPsi);
             for i = 1:obj.nIter
@@ -151,51 +144,50 @@ classdef BEMSolver
                 % calculate velocity and loads 
                 uRotor = uInf*(1-a);               % axial velocity
                 uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
-                uPer = norm([uRotor, uTan]);
 %                 qDyn = 0.5*obj.rho*uPer^2;
-                [cAx, cAz] = obj.computeLoadsSegment(uRotor, uTan, ...
+                [cl, cd] = obj.computeLoadsSegment(uRotor, uTan, ...
                                    twistAngle, obj.bladePitch, ...
                                    obj.fCL, obj.fCD);
-                               
-                Ax = cAx*0.5*chord*uPer^2*dR*nBlades;
-                Az = cAz*0.5*chord*uPer^2*dR*nBlades;
-                CT = Ax / (0.5*areaSegment*uInf^2);% thrust coeff.
                 
-                % compute new iterant a
-                a_ip1 = obj.calcGlauertCorr(CT);
-                fTot = obj.calcPrandtlTipCorr(rR, rRoot, rTip, obj.TSR,...
-                       obj.nBlades, a_ip1);
-                   
-                a_ip1 = a_ip1/fTot;
+                % calculate inflow angle from velocities
+                phi = atan2(uRotor, uTan);
+                sigmaP = nBlades*chord/(2*pi*rR*rRotor);
+                CT = 1+sigmaP*(1-a)^2*(cl*cos(phi)+cd*sin(phi))/ ... 
+                     sin(phi)^2;
                 
-                % limit flow factor
+                % Tip and root correction
+                fTot = obj.calcPrandtlTipCorr(rR, rRoot, rRotor, nBlades, ...
+                       phi);
+                 
+                % compute a and aprime
+                if CT > 0.96*fTot
+                    a_ip1 = (18*fTot-20-3*sqrt(CT*(50-36*fTot)+12*fTot...
+                            *(3*fTot-4)))/(36*fTot-50);
+                else
+                    a_ip1 = (-1+4*fTot*sin(phi)^2/ ...
+                             (sigmaP*(cl*cos(phi)+cd*sin(phi))))^(-1);
+                end
+                
+                aprime_ip1 = (-1+4*fTot*sin(phi)*cos(phi)/ ...
+                             (sigmaP*(cl*sin(phi)-cd*cos(phi))))^(-1);
+                
                 if a_ip1 > 0.95
                     a_ip1 = 0.95;
                 end
                 
-                % update a (scheme for stability) and aprime
-                a = 0.75*a+0.25*a_ip1;
-                
-                % compute new iterant a'
-                phi = atan2(uRotor, uTan);
-                sigmaR = nBlades*chord/(2*pi*rR*rRotor);
-                iterap = sigmaR*cAz/(4*sin(phi)*cos(phi));
-                aprime_ip1 = iterap/(1-iterap)/fTot;
-%                 aprime_ip1 = Az*nBlades/(2*pi*uInf*(1-a)*Omega*2* ... 
-%                         (rR*rRotor)^2)/fTot;
-                aprime = 0.75 * aprime + 0.25 * aprime_ip1;
-                
-                % finish iterating if error is below tolerance
                 if abs(a - a_ip1) < obj.atol && ... 
                    abs(aprime - aprime_ip1) < obj.atol
                     break;
                 end
+                
+                % update flow factors
+                a = 0.75 * a + 0.25 * a_ip1;
+                aprime = 0.75 * aprime + 0.25 * aprime_ip1;
+                
             end
             % apply skewing factor / correction for yaw
             askew = obj.skewWakeCorr(a, rR, obj.yawAngle, psiArr);
-            nAx = Ax/(0.5*uPer^2*dR*nBlades);
-            nAz = Az/(0.5*uPer^2*dR*nBlades);
-            sol = [rR, a, aprime, nAx, nAz, CT, fTot];
+            sol = [rR, a, aprime, cl, cd, CT, fTot];
         end
     end
     
@@ -212,12 +204,14 @@ classdef BEMSolver
             twistAngle = deg2rad(14*(1-rR));
         end
         
-        function fTot = calcPrandtlTipCorr(rR, rRoot, rTip, TSR, nBlades, a)
+        function fTot = calcPrandtlTipCorr(rR, rRoot, rRotor, nBlades, phi)
             % CHECKED
             % calculate Prandtl Tip Corrections FACTORS!
-            temp1 = -nBlades/2*(rTip-rR)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
+            r = rR * rRotor;
+            rHub = rRoot * rRotor;
+            temp1 = -nBlades/2*(rRotor - r)/(r*sin(phi));
             fTip  = 2/pi*acos(exp(temp1));
-            temp1 = -nBlades/2*(rR-rRoot)/rR*sqrt(1+(TSR*rR)^2/(1-a)^2);
+            temp1 = -nBlades/2*(r - rHub)/(r*sin(phi));
             fRoot = 2/pi*acos(exp(temp1));
             fTot = fRoot*fTip;
             if fTot < 1e-4 
