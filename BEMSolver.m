@@ -17,6 +17,8 @@ classdef BEMSolver
         bladePitch (1,1) double = -2;                     % deg
         atol (1,1) double = 1e-6;
         nIter (1,1) uint16 = 100; 
+        yawAngle (1,1) double = 0;
+        nPsi (1,1) uint16 = 10;
     end
     
     % computed properties
@@ -107,17 +109,24 @@ classdef BEMSolver
         
         function solTotal = solveRotor(obj)
             % solve problem for each annulus
-            solTotal = zeros(obj.nSegments, 7);
+            solTotalArr = zeros(obj.nSegments, 7);
+            askewTotal = zeros(obj.nSegments, obj.nPsi);
             for i = 1:obj.nSegments
-                [rRi, ai, aprimei, Azi, Axi, fTot, CT] = solveStreamtube(obj, ...
+                [sol, askew] = solveStreamtube(obj, ...
                     obj.locSegment(i), obj.locSegment(i+1), ...
                     obj.rRootRatio, obj.rTipRatio, obj.rRotor, ...
                     obj.uInf, obj.Omega, obj.nBlades);
-                solTotal(i, :) = [rRi, ai, aprimei, Azi, Axi, fTot, CT];
+                solTotalArr(i, :) = sol(:);
+                askewTotal(i,:) = askew(:);
+            
+            solTotal = struct("rR", solTotalArr(:,1), "a", solTotalArr(:,2), ...
+                    "aprime", solTotalArr(:,3), "askew", askewTotal, ...
+                    "nAx", solTotalArr(:,4), "nAz", solTotalArr(:,5), ...
+                    "fTot", solTotalArr(:,7), "CT", solTotalArr(:,6));
             end
         end
         
-        function [rR, a, aprime, Ax, Az, fTot, CT] = solveStreamtube( ...
+        function [sol, askew] = solveStreamtube( ...
                 obj, rR1, rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
             % solve balance of momentum between blade element load and
             % loading in the streamtube
@@ -136,7 +145,9 @@ classdef BEMSolver
             areaSegment = pi * ( (rR2*rRotor)^2 - (rR1*rRotor)^2);
             dR = rRotor * (rR2 - rR1);          % segment radial length
             a = 0.3; aprime = 0;  % flow factors
+            psiArr = linspace(0, 2*pi, obj.nPsi);
             for i = 1:obj.nIter
+                
                 % calculate velocity and loads 
                 uRotor = uInf*(1-a);               % axial velocity
                 uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
@@ -145,6 +156,7 @@ classdef BEMSolver
                 [cAx, cAz] = obj.computeLoadsSegment(uRotor, uTan, ...
                                    twistAngle, obj.bladePitch, ...
                                    obj.fCL, obj.fCD);
+                               
                 Ax = cAx*0.5*chord*uPer^2*dR*nBlades;
                 Az = cAz*0.5*chord*uPer^2*dR*nBlades;
                 CT = Ax / (0.5*areaSegment*uInf^2);% thrust coeff.
@@ -153,19 +165,24 @@ classdef BEMSolver
                 a_ip1 = obj.calcGlauertCorr(CT);
                 fTot = obj.calcPrandtlTipCorr(rR, rRoot, rTip, obj.TSR,...
                        obj.nBlades, a_ip1);
+                   
                 a_ip1 = a_ip1/fTot;
+                
+                % limit flow factor
+                if a_ip1 > 0.95
+                    a_ip1 = 0.95;
+                end
                 
                 % update a (scheme for stability) and aprime
                 a = 0.75*a+0.25*a_ip1;
                 
-                % limit flow factor
-                if a > 0.95
-                    a = 0.95;
-                end
-                
                 % compute new iterant a'
-                aprime_ip1 = Az*nBlades/(2*pi*uInf*(1-a)*Omega*2* ... 
-                        (rR*rRotor)^2)/fTot;
+                phi = atan2(uRotor, uTan);
+                sigmaR = nBlades*chord/(2*pi*rR*rRotor);
+                iterap = sigmaR*cAz/(4*sin(phi)*cos(phi));
+                aprime_ip1 = iterap/(1-iterap)/fTot;
+%                 aprime_ip1 = Az*nBlades/(2*pi*uInf*(1-a)*Omega*2* ... 
+%                         (rR*rRotor)^2)/fTot;
                 aprime = 0.75 * aprime + 0.25 * aprime_ip1;
                 
                 % finish iterating if error is below tolerance
@@ -174,7 +191,11 @@ classdef BEMSolver
                     break;
                 end
             end
-    
+            % apply skewing factor / correction for yaw
+            askew = obj.skewWakeCorr(a, rR, obj.yawAngle, psiArr);
+            nAx = Ax/(0.5*uPer^2*dR*nBlades);
+            nAz = Az/(0.5*uPer^2*dR*nBlades);
+            sol = [rR, a, aprime, nAx, nAz, CT, fTot];
         end
     end
     
