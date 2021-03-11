@@ -8,8 +8,8 @@ a.spacing = "0";
 a.atol = 1e-6;
 a.nIter = 100;
 a.bladePitch = -2;
-a.nPsi = 0;
-a.uInf = 1.0;
+a.nPsi = 50;
+a.yawAngle = 15;
 
 %% Initialise some other attributes
 a = a.init();
@@ -28,12 +28,14 @@ ylim([0 1])
 
 % plot(res.rR, res.Ax, res.rR, res.Az); %absolute forces
 % grid on
+
 % [t,r]=meshgrid(res.psi,res.rR);
-% h=polar(t, r);
-% hold on
-% contourf(t, r, res.askew)
-% set(h,'Visible','off')
-% polarplot(res.psi, res.rR, res.askew)
+% x = r.*cos(t);
+% y = r.*sin(t);
+% contourf(x, y, res.askew)
+% colorbar
+
+% plot(sum(res.ThrustIter,2))
 
 % figure
 % plot(res.rR, res.fTot); % crrection

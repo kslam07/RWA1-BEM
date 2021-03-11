@@ -118,13 +118,15 @@ classdef BEMSolver
             % solve problem for each annulus
             solTotalArr = zeros(obj.nSegments, 13);
             askewTotal = zeros(obj.nSegments, obj.nPsi);
+            thrustTotal = zeros(obj.nIter, obj.nIter);
             for i = 1:obj.nSegments
-                [sol, askew] = solveStreamtube(obj, ...
+                [sol, askew, thrustIter] = solveStreamtube(obj, ...
                     obj.locSegment(i), obj.locSegment(i+1), ...
                     obj.rRootRatio, obj.rTipRatio, obj.rRotor, ...
                     obj.uInf, obj.Omega, obj.nBlades);
                 solTotalArr(i, :) = sol(:);
                 askewTotal(i,:) = askew(:);
+                thrustTotal(i,:) = thrustIter(:);
             
             solTotal = struct("rR", solTotalArr(:,1), "a", solTotalArr(:,2), ...
                     "aprime", solTotalArr(:,3), "askew", askewTotal, ...
@@ -133,11 +135,11 @@ classdef BEMSolver
                     "phi", solTotalArr(:,8), "alpha", solTotalArr(:,9), ...
                     "Ax", solTotalArr(:,10), "Az", solTotalArr(:,11),...
                     "CN", solTotalArr(:,12), "CQ", solTotalArr(:,13),...
-                    "psi", obj.psiSegment);
+                    "psi", obj.psiSegment, "ThrustIter", thrustTotal);
             end
         end
         
-        function [sol, askew] = solveStreamtube(obj, locIn, locOut, ... 
+        function [sol, askew, thrustIter] = solveStreamtube(obj, locIn, locOut, ... 
                                 rRoot, rTip, rRotor, uInf, Omega, nBlades)
             % solve balance of momentum between blade element load and
             % loading in the streamtube
@@ -156,6 +158,7 @@ classdef BEMSolver
             areaSegment = pi * ( (locOut*rRotor)^2 - (locIn*rRotor)^2);
             dR = rRotor * (locOut - locIn);     % segment radial length
             a = 0.3; aprime = 0;  % flow factors
+            thrustIter=zeros(1,obj.nIter);
             for i = 1:obj.nIter
                 
                 % calculate velocity and loads 
@@ -200,6 +203,7 @@ classdef BEMSolver
 %                 aprime_ip1 = Az*nBlades/(2*pi*uInf*(1-a)*Omega*2* ... 
 %                         (rR*rRotor)^2)/fTot;
                 
+                thrustIter(i) = Ax;
                 % finish iterating if error is below tolerance
                 if abs(a - a_ip1) < obj.atol && ... 
                    abs(aprime - aprime_ip1) < obj.atol
@@ -262,7 +266,7 @@ classdef BEMSolver
         end
         
         function aSkew = skewWakeCorr(a, rR, gamma, psi)
-            chi = gamma*(1+0.6*a);
+            chi = deg2rad(gamma)*(1+0.6*a);
             aSkew = a*(1+15*pi/32*rR*tan(chi/2).*cos(psi));
         end
     end
