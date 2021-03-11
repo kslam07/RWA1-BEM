@@ -151,7 +151,7 @@ classdef BEMsolverNREL
                 
                 % calculate inflow angle from velocities
                 phi = atan2(uRotor, uTan);
-                sigmaP = nBlades*chord/(2*pi*rR*rRotor);
+                sigmaP = nBlades*chord/(2*pi*rR*rRotor);    %local solidity
                 CT = 1+sigmaP*(1-a)^2*(cl*cos(phi)+cd*sin(phi))/ ... 
                      sin(phi)^2;
                 
@@ -164,7 +164,7 @@ classdef BEMsolverNREL
                     a_ip1 = (18*fTot-20-3*sqrt(CT*(50-36*fTot)+12*fTot...
                             *(3*fTot-4)))/(36*fTot-50);
                 else
-                    a_ip1 = (-1+4*fTot*sin(phi)^2/ ...
+                    a_ip1 = (1+4*fTot*sin(phi)^2/ ...
                              (sigmaP*(cl*cos(phi)+cd*sin(phi))))^(-1);
                 end
                 
@@ -209,15 +209,15 @@ classdef BEMsolverNREL
             % calculate Prandtl Tip Corrections FACTORS!
             r = rR * rRotor;
             rHub = rRoot * rRotor;
-            temp1 = -nBlades/2*(rRotor - r)/(r*sin(phi));
+            temp1 = -nBlades/2*(rRotor - r)/(r*abs(sin(phi)));
             fTip  = 2/pi*acos(exp(temp1));
-            temp1 = -nBlades/2*(r - rHub)/(r*sin(phi));
+            temp1 = -nBlades/2*(r - rHub)/(r*abs(sin(phi)));
             fRoot = 2/pi*acos(exp(temp1));
             fTot = fRoot*fTip;
             if fTot < 1e-4 
                 fTot = 1e-4;  % avoide divide by zero or blow-up
             elseif isnan(fTot) == true
-                fTot = 0;
+                fTot = 1e-4;
             end
         end
 

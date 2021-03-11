@@ -4,11 +4,11 @@ a = BEMsolverNREL;
 a.nBlades = 3;
 a.TSR = 6;
 a.nSegments = 50;
-a.spacing = "cosine";
+a.spacing = "0";
 a.atol = 1e-6;
 a.nIter = 100;
-a.bladePitch = 0;
-a.nPsi = 50;
+a.bladePitch = -2;
+a.nPsi = 0;
 
 %% Initialise some other attributes
 a = a.init();

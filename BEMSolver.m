@@ -185,17 +185,20 @@ classdef BEMSolver
                     a_ip1 = 0.95;
                 end
                 
-                % update a (scheme for stability) and aprime
+                % update a and aprime (scheme for stability)
                 a = 0.75*a+0.25*a_ip1;
                 
-                % compute new iterant a'
+                % compute new iterant a'; method on BS did not result in
+                % proper results
                 phi = atan2(uRotor, uTan);
                 sigmaR = nBlades*chord/(2*pi*rR*rRotor);
                 iterap = sigmaR*cAz/(4*sin(phi)*cos(phi));
                 aprime_ip1 = iterap/(1-iterap)/fTot;
+                
+                % update scheme
+                aprime = 0.75 * aprime + 0.25 * aprime_ip1;
 %                 aprime_ip1 = Az*nBlades/(2*pi*uInf*(1-a)*Omega*2* ... 
 %                         (rR*rRotor)^2)/fTot;
-                aprime = 0.75 * aprime + 0.25 * aprime_ip1;
                 
                 % finish iterating if error is below tolerance
                 if abs(a - a_ip1) < obj.atol && ... 
@@ -203,12 +206,20 @@ classdef BEMSolver
                     break;
                 end
             end
-            % apply skewing factor / correction for yaw
-            askew = obj.skewWakeCorr(a, rR, obj.yawAngle, obj.psiSegment);
-            nAx = Ax/(0.5*uPer^2*dR*nBlades);
-            nAz = Az/(0.5*uPer^2*dR*nBlades);
-            sol = [rR, a, aprime, nAx, nAz, CT, fTot, phi, alpha, Ax, ...
-                Az, CN, CQ];
+            
+            if i == obj.nIter
+                disp("not converged")
+                askew = zeros(1, obj.nPsi);
+                sol = [rR, NaN.*ones(1, 12)];
+            else
+                % apply skewing factor / correction for yaw
+                askew = obj.skewWakeCorr(a, rR, obj.yawAngle, ...
+                        obj.psiSegment);
+                nAx = Ax/(0.5*uPer^2*dR*nBlades);
+                nAz = Az/(0.5*uPer^2*dR*nBlades);
+                sol = [rR, a, aprime, nAx, nAz, CT, fTot, phi, alpha, ...
+                    Ax, Az, CN, CQ];
+            end
         end
     end
     
