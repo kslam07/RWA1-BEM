@@ -1,28 +1,30 @@
 %% ability to pass args when constructing class looks like a PitA
 %  do this instead
-a = BEMSolver;
-a.nBlades = 5;
-a.TSR = 8;
-a.nSegments = 100;
-a.spacing = "0";
-a.atol = 1e-6;
-a.nIter = 100;
-a.bladePitch = -2;
-a.nPsi = 50;
-a.yawAngle = 15;
+solver = BEMSolver;
+solver.nBlades = 3;
+solver.TSR = 6;
+solver.nAnnulus = 100;
+solver.spacing = "0";
+solver.atol = 1e-6;
+solver.nIter = 100;
+solver.bladePitch = -2;
+solver.nPsi = 5;
+solver.yawAngle = 15;
 
 %% Initialise some other attributes
-a = a.init();
+solver = solver.init();
 
 %% run the BEM
-res = a.solveRotor();
+solver = solver.solveStreamtube();
 
 %% post-process results
 % figure
 % plot(res.rR, res.alpha, res.rR, res.phi);
 
-plot(res.rR, res.a, res.rR, res.aprime, "linewidth", 1.3);
-ylim([0 1])
+% plot(solver.rR, solver.a(:, 1), solver.rR, solver.aprime(:, 1), ...
+%     "linewidth", 1.3);
+% ylim([0 1])
+% grid
 % plot(res.rR, res.CT, res.rR, res.CQ, res.rR, res.CN); % coefficients
 % legend('CT', 'CQ', 'CN')
 
@@ -38,7 +40,7 @@ ylim([0 1])
 % plot(sum(res.ThrustIter,2))
 
 % figure
-% plot(res.rR, res.fTot); % crrection
+% plot(solver.rR, solver.fTot(:, 1)); % crrection
 % grid on
 
 % aSkew
