@@ -138,14 +138,6 @@ classdef BEMSolver
             clSegment(alphaSegment < obj.amin) = obj.fCL(obj.amin);
             cdSegment(alphaSegment < obj.amin) = obj.fCD(obj.amin);
             
-%             if alphaSegment > obj.amax
-%                 cl = obj.fCL(obj.amax); cd = obj.fCD(obj.amax);
-%             elseif alphaSegment < obj.amin
-%                 cl = obj.fCL(obj.amin); cd = obj.fCD(obj.amin);
-%             else
-%                 cl = obj.fCL(alphaSegment); cd = obj.fCD(alphaSegment);
-%             end
-            
             % compute the normal and tangential coefficients
             cAz = clSegment.*sin(phiSegment) - cdSegment.*cos(phiSegment);
             cAx = clSegment.*cos(phiSegment) + cdSegment.*sin(phiSegment);
@@ -249,16 +241,6 @@ classdef BEMSolver
             obj.CN(:, :) = CNSegment;
             obj.Cq(:, :) = CQSegment;
             obj.fTot(:, :) = fTotSegment;
-            
-%                 % apply skewing factor / correction for yaw
-%                 askew = obj.skewWakeCorr(aSegment, rR, obj.yawAngle, ...
-%                         obj.psiSegment);
-%                 nAx = Ax/(0.5*uPer^2*dR*nBlades);
-%                 nAz = Az/(0.5*uPer^2*dR*nBlades);
-%                 sol = [rR, aSegment, apSegment, nAx, nAz, CTSegment, fTot,
-%                   phiSegment, alphaSegment, ...
-%                     Ax, Az, CNSegment, CQ];
-%             end
         end
     end
     
