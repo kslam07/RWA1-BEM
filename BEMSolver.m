@@ -56,6 +56,7 @@ classdef BEMSolver
             obj         = computeSegments(obj);
             obj         = computePsiArr(obj);
             obj.Omega   = obj.TSR * obj.uInf / obj.rRotor;
+            obj.yawAngle = deg2rad(obj.yawAngle);
             
             % allocate memory for rest of matrices holding solutions
             obj.alpha   = zeros(obj.nAnnulus, obj.nPsi);
@@ -117,6 +118,11 @@ classdef BEMSolver
             obj.amin = min(alphaRad);
         end
         
+        function aSkew = skewWakeCorr(obj, aSegment, rR, psiSegment)
+            chi = obj.yawAngle.*(1+0.6.*aSegment);
+            aSkew = aSegment.*(1+15*pi/64.*rR.*tan(chi/2).*sin(psiSegment));
+        end
+
         function [cAx, cAz, alphaSegment] = computeLoadsSegment(obj, ...
                 uRotor, uTan, twistAngle)
             
@@ -175,9 +181,10 @@ classdef BEMSolver
             for j = 1:obj.nIter
                 % compute velocities for elements in annulus
                 % axial velocity
-                uRotor = obj.uInf*(1-aSegment);
+                uRotor = obj.uInf*cos(obj.yawAngle)*(1-aSegment);
                 % tang. velocity
-                uTan = (1+apSegment).*obj.Omega.*obj.rR*obj.rRotor;
+                uTan = (1+apSegment).*(obj.Omega.*obj.rR*obj.rRotor ...
+                    - obj.uInf*sin(obj.yawAngle)*cos(obj.psiSegment));
                 % relative velocity
                 uPer = sqrt(uRotor.^2 + uTan.^2);
                 
@@ -281,11 +288,6 @@ classdef BEMSolver
             % if blade segment is heavily loaded however:
             a(CT < (2*sqrt(CT1)-CT1)) = 0.5 - sqrt(1-CT(CT < ...
                                         (2*sqrt(CT1)-CT1)))/2;
-        end
-        
-        function aSkew = skewWakeCorr(aSegment, rR, gamma, psi)
-            chi = deg2rad(gamma).*(1+0.6*aSegment);
-            aSkew = aSegment.*(1+15*pi/32*rR*tan(chi/2).*cos(psi));
         end
     end
 end

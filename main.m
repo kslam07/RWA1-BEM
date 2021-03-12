@@ -8,7 +8,7 @@ solver.spacing = "0";
 solver.atol = 1e-6;
 solver.nIter = 100;
 solver.bladePitch = -2;
-solver.nPsi = 5;
+solver.nPsi = 10;
 solver.yawAngle = 15;
 
 %% Initialise some other attributes
@@ -21,10 +21,19 @@ solver = solver.solveStreamtube();
 % figure
 % plot(res.rR, res.alpha, res.rR, res.phi);
 
-% plot(solver.rR, solver.a(:, 1), solver.rR, solver.aprime(:, 1), ...
-%     "linewidth", 1.3);
-% ylim([0 1])
-% grid
+figure
+hold on
+for i = 1:solver.nPsi
+    plot(solver.rR, solver.a(:, i), solver.rR, solver.aprime(:, i), ...
+        '--', "linewidth", 1.3, "DisplayName", ...
+        ['yaw:' num2str(rad2deg(solver.psiSegment(i)))]);
+end
+
+legend("show")
+ylim([0 1])
+xlim([solver.rRootRatio 1])
+grid
+
 % plot(res.rR, res.CT, res.rR, res.CQ, res.rR, res.CN); % coefficients
 % legend('CT', 'CQ', 'CN')
 
