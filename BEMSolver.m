@@ -197,11 +197,7 @@ classdef BEMSolver
                 % azimuthal force
                 AzSegment = cAz.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
                 % thrust coefficient
-                CTSegment = AxSegment ./ (0.5*areaSegment*obj.uInf^2);
-                % torque coefficient
-                CQSegment = AzSegment ./ (0.5*areaSegment*obj.uInf^2);
-                % normal coefficient
-                CNSegment = CQSegment ./ obj.rR;                     
+                CTSegment = AxSegment ./ (0.5*areaSegment*obj.uInf^2);                  
 
                 % compute new iterant a
                 aip1Segment = obj.calcGlauertCorr(CTSegment);
@@ -225,7 +221,7 @@ classdef BEMSolver
                 % aprime_{i+1}
                 apip1Segment = iterap./(1-iterap)./fTotSegment;
                 % update aprime
-                apSegment = 0.75 * apSegment + 0.25 * apip1Segment;
+                apSegment = 0.5 * apSegment + 0.5 * apip1Segment;
                 
                 % log axial force each iteration
 %                 obj.thrustIter(iAnn,:,j) = AxSegment;
@@ -236,6 +232,12 @@ classdef BEMSolver
                     break;
                 end
             end
+            
+            % compute other parameters
+            % torque coefficient
+            CQSegment = AzSegment ./ (0.5*areaSegment*obj.uInf^2);
+            % normal coefficient
+            CNSegment = CQSegment ./ obj.rR;   
             
             % store final result in corresponding property
             obj.alpha(:, :) = alphaSegment;
