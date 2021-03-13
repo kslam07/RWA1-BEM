@@ -45,13 +45,16 @@ classdef BEMSolver
         
     end
     
-    properties(Access = protected)
+    properties%(Access = protected)
         airfoilFilename = "polar_DU95W180.xlsx";
         fCL
         fCD
         amax
         amin
         Omega
+        alphas
+        CL
+        CD
     end
     
     methods
@@ -114,15 +117,26 @@ classdef BEMSolver
             % Create fitted functions from the airfoil polar data
             % Create two spline functions to fit the CL and CD data from
             % the polar data given to the class.
-            
             data = table2array(readtable(obj.airfoilFilename));
             alphaRad = deg2rad(data(:,1));
             obj.fCL = fit(alphaRad, data(:, 2), "cubicinterp");
             obj.fCD = fit(alphaRad, data(:, 3), "cubicinterp");
             obj.amax = max(alphaRad);
             obj.amin = min(alphaRad);
+            obj.alphas = alphaRad;
+            obj.CL = data(:, 2);
+            obj.CD = data(:, 3);
         end
         
+%         function [clSegment, cdSegment] = interpolatePolars(obj, aq)
+%             clSegment = interp1(obj.alphas, obj.CL, aq, "linear");
+%             cdSegment = interp1(obj.alphas, obj.CD, aq, "linear");
+%             
+%             % correct if aq (query alpha) is beyond alpha in data
+%             clSegment(aq > 
+%             
+%         end
+
         function aSkew = skewWakeCorr(obj, aSegment, rR, psiSegment)
             chi = obj.yawAngle.*(1+0.6.*aSegment);
             aSkew = aSegment.*(1+15*pi/64.*rR.*tan(chi/2).*sin(psiSegment));
@@ -192,7 +206,7 @@ classdef BEMSolver
                     - obj.uInf*sin(obj.yawAngle)*cos(obj.psiSegment));
                 % relative velocity
                 uPer = sqrt(uRotor.^2 + uTan.^2);
-                
+                phiSegment = atan2(uRotor, uTan);
                 % compute non-dim loads for elements in annulus
                 [cAx, cAz, ClSegment, CdSegment, alphaSegment] ...
                     = obj.computeLoadsSegment(uRotor, uTan, twistAngle);
@@ -203,30 +217,30 @@ classdef BEMSolver
                 AzSegment = cAz.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
                 % thrust coefficient
                 CTSegment = AxSegment ./ (0.5*areaSegment*obj.uInf^2);                  
-
+                
+                % local solidity
+                sigmaR = obj.nBlades*chord ./ (2*pi*obj.rR*obj.rRotor);
                 % compute new iterant a
-                aip1Segment = obj.calcGlauertCorr(CTSegment);
-                fTotSegment = obj.calcPrandtlTipCorr(obj.rR, obj.rRootRatio, ...
-                    obj.rTipRatio, obj.TSR, obj.nBlades, aip1Segment);
+                aip1Segment = obj.calcGlauertCorr(CTSegment, sigmaR, ...
+                    phiSegment, cAx);
+                fTotSegment = obj.calcPrandtlTipCorr(obj.rR, ...
+                    obj.rRootRatio, obj.rTipRatio, obj.TSR, ...
+                    obj.nBlades, aip1Segment);
                 
                 % Prandtl correction for heavily loaded sections
                 aip1Segment = aip1Segment./fTotSegment;
                 % limit flow factor for numerical stability
                 aip1Segment(aip1Segment > 0.95) = 0.95;
-                
                 % update a (scheme for stability)
                 aSegment = 0.75*aSegment+0.25*aip1Segment;
                 
                 % compute new iterant a'; method on BS did not result in
                 % proper results
-                phiSegment = atan2(uRotor, uTan);
-                % local solidity
-                sigmaR = obj.nBlades*chord ./ (2*pi*obj.rR*obj.rRotor);
-                iterap = sigmaR.*cAz./(4*sin(phiSegment).*cos(phiSegment));
-                % aprime_{i+1}
-                apip1Segment = iterap./(1-iterap)./fTotSegment;
+                kappap = sigmaR.*cAz./(4*sin(phiSegment).*cos(phiSegment));
+                % aprime_{i+1} and prandtl correction
+                apip1Segment = kappap./(1-kappap)./fTotSegment;
                 % update aprime
-                apSegment = 0.5 * apSegment + 0.5 * apip1Segment;
+                apSegment = 0.75 * apSegment + 0.25 * apip1Segment;
                 
                 % log axial force each iteration
                 obj.thrustIter(:,:,j) = AxSegment;
@@ -297,14 +311,20 @@ classdef BEMSolver
             fTot(fTot < 1e-4 | isnan(fTot)) = 1e-4;
         end
 
-        function a = calcGlauertCorr(CT)
+        function a = calcGlauertCorr(CT, sigmaR, phi, cAx)
             % computes the Glauert correction for heavily loaded rotors
             CT1 = 1.816;
-            % compute a without correction CT1 = 1.816
-            a = (1+CT-CT1) ./ (4*sqrt(CT1)-4); 
-            % if blade segment is heavily loaded however:
-            a(CT < (2*sqrt(CT1)-CT1)) = 0.5 - sqrt(1-CT(CT < ...
-                                        (2*sqrt(CT1)-CT1)))/2;
+            CT2 = 2*sqrt(CT1)-CT1;
+%             compute a without correction CT1 = 1.816
+%             kappa = (sigmaR.*cAx ./ (4*sin(phi).^2));
+%             a = kappa ./ (1+kappa);
+            
+            % correct a with Glauert correction
+%             a(CT >= CT2) = 1+(CT(CT>=CT2)-CT1)/(4*sqrt(CT1)-4);
+            % compute a with Glauert correction
+            a = 1+(CT-CT1) ./ (4*sqrt(CT1)-4); 
+            % if blade segment is NOT heavily loaded:
+            a(CT < CT2) = 0.5 - 0.5*sqrt(1-CT(CT < CT2));
         end
     end
 end
