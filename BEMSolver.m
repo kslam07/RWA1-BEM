@@ -38,6 +38,7 @@ classdef BEMSolver
         Cq (:, :) double;           % torque coefficient
         thrustIter (:, :, :) double;   % thrust iterations
         fTot (:, :) double;         % Prandtl correction
+        gamma (:, :) double;        % Circulation
     end
     
     properties(Access = protected)
@@ -228,7 +229,7 @@ classdef BEMSolver
                 apSegment = 0.75 * apSegment + 0.25 * apip1Segment;
                 
                 % log axial force each iteration
-%                 obj.thrustIter(iAnn,:,j) = AxSegment;
+                obj.thrustIter(:,:,j) = AxSegment;
 
                 % finish iterating if error is below tolerance
                 if all(abs(aSegment - aip1Segment) < obj.atol, "all") &&... 
@@ -236,6 +237,8 @@ classdef BEMSolver
                     break;
                 end
             end
+            obj.thrustIter(obj.thrustIter==0)=obj.thrustIter(find(obj.thrustIter,1,'last'));
+            obj.gamma = 0.5*sqrt(uRotor.^2+uTan.^2).*cl*chord/(pi*obj.uInf^2./obj.Omega./obj.nBlades);
             
             % store final result in corresponding property
             obj.alpha(:, :) = alphaSegment;
@@ -248,6 +251,7 @@ classdef BEMSolver
             obj.CN(:, :) = CNSegment;
             obj.Cq(:, :) = CQSegment;
             obj.fTot(:, :) = fTotSegment;
+            obj.gamma(:, :) = gamma;
         end
     end
     
