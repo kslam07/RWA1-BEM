@@ -33,12 +33,16 @@ classdef BEMSolver
         a (:, :) double;            % axial flow factor
         Az (:, :) double;           % azimuthal force
         Ax (:, :) double;           % axial force
+        Cl (:, :) double;           % sectional lift coefficient
+        Cd (:, :) double;           % sectional drag coefficient
         CT (:, :) double;           % thrust coefficients
         CN (:, :) double;           % normal force coefficients
         Cq (:, :) double;           % torque coefficient
         thrustIter (:, :, :) double;   % thrust iterations
         fTot (:, :) double;         % Prandtl correction
         gamma (:, :) double;        % Circulation
+        areaAnnulus (:, 1) double   % area of each annuli
+        
     end
     
     properties(Access = protected)
@@ -124,8 +128,8 @@ classdef BEMSolver
             aSkew = aSegment.*(1+15*pi/64.*rR.*tan(chi/2).*sin(psiSegment));
         end
 
-        function [cAx, cAz, alphaSegment] = computeLoadsSegment(obj, ...
-                uRotor, uTan, twistAngle)   
+        function [cAx, cAz, clSegment, cdSegment, alphaSegment] ...
+                = computeLoadsSegment(obj, uRotor, uTan, twistAngle)   
             
             theta = deg2rad(obj.bladePitch);                % blade pitch
             phiSegment = atan2(uRotor, uTan);               % flow angle
@@ -190,8 +194,8 @@ classdef BEMSolver
                 uPer = sqrt(uRotor.^2 + uTan.^2);
                 
                 % compute non-dim loads for elements in annulus
-                [cAx, cAz, alphaSegment] = obj.computeLoadsSegment(...
-                    uRotor, uTan, twistAngle);
+                [cAx, cAz, ClSegment, CdSegment, alphaSegment] ...
+                    = obj.computeLoadsSegment(uRotor, uTan, twistAngle);
                 % dimensionalize it but leave density out (cancels out)
                 % axial force
                 AxSegment = cAx.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
@@ -233,27 +237,34 @@ classdef BEMSolver
                     break;
                 end
             end
-            obj.thrustIter(obj.thrustIter==0)=obj.thrustIter(find(obj.thrustIter,1,'last'));
-            obj.gamma = 0.5*sqrt(uRotor.^2+uTan.^2).*cl*chord/(pi*obj.uInf^2./obj.Omega./obj.nBlades);
+            
+            % copy last value in col array to remove zeros
+            obj.thrustIter(obj.thrustIter==0)= ...
+                obj.thrustIter(find(obj.thrustIter,1,'last'));
+            % compute circulation from uRotor and uTan
+            obj.gamma = 0.5*sqrt(uRotor.^2+uTan.^2).*ClSegment.*chord/...
+                (pi*obj.uInf^2/obj.Omega/obj.nBlades);
             
             % compute other parameters
             % torque coefficient
             CQSegment = AzSegment ./ (0.5*areaSegment*obj.uInf^2);
             % normal coefficient
-            CNSegment = CQSegment ./ obj.rR;   
+            CNSegment = CQSegment ./ obj.rR;
             
             % store final result in corresponding property
+            obj.areaAnnulus = areaSegment;
             obj.alpha(:, :) = alphaSegment;
-            obj.phi(:, :) = phiSegment;
-            obj.aprime(:, :) = apSegment;
-            obj.a(:, :) = aSegment;
-            obj.Ax(:, :) = AxSegment;
-            obj.Az(:, :) = AzSegment;
-            obj.CT(:, :) = CTSegment;
-            obj.CN(:, :) = CNSegment;
-            obj.Cq(:, :) = CQSegment;
-            obj.fTot(:, :) = fTotSegment;
-            obj.gamma(:, :) = gamma;
+            obj.phi(:, :)   = phiSegment;
+            obj.aprime(:, :)= apSegment;
+            obj.a(:, :)     = aSegment;
+            obj.Ax(:, :)    = AxSegment;
+            obj.Az(:, :)    = AzSegment;
+            obj.Cl          = ClSegment;
+            obj.Cd          = CdSegment;
+            obj.CT(:, :)    = CTSegment;
+            obj.CN(:, :)    = CNSegment;
+            obj.Cq(:, :)    = CQSegment;
+            obj.fTot(:, :)  = fTotSegment;
         end
     end
     
