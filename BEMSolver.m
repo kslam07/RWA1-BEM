@@ -124,7 +124,7 @@ classdef BEMSolver
         end
 
         function [cAx, cAz, alphaSegment] = computeLoadsSegment(obj, ...
-                uRotor, uTan, twistAngle)
+                uRotor, uTan, twistAngle)   
             
             theta = deg2rad(obj.bladePitch);                % blade pitch
             phiSegment = atan2(uRotor, uTan);               % flow angle
