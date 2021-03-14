@@ -1,15 +1,16 @@
 %% ability to pass args when constructing class looks like a PitA
 %  do this instead
 solver = BEMSolver;
-solver.nBlades = 5;
-solver.TSR = 12;
+solver.nBlades = 3;
+solver.TSR = 8;
 solver.nAnnulus = 50;
-solver.spacing = "cosine";
+solver.spacing = "0";
 solver.atol = 1e-4;
 solver.nIter = 100;
-solver.bladePitch = -2;
+solver.bladePitch = 0;
 solver.nPsi = 50;
 solver.yawAngle = 30;
+solver.uInf = 9;
 
 %% Initialise some other attributes
 solver = solver.init();
@@ -18,7 +19,6 @@ solver = solver.init();
 solver = solver.solveStreamtube();
 
 %% post-process solverults
-
 figure
 plot(solver.rR, rad2deg(solver.alpha), "linewidth", 1.3);
 
@@ -30,6 +30,9 @@ for i = 1:solver.nPsi
         ['yaw:' num2str(rad2deg(solver.psiSegment(i)))]);
 end
 
+figure(50)
+[~, idx] = min(abs(solver.rR - 0.9));
+plot(rad2deg(solver.psiSegment), solver.a(idx, :)); 
 % legend("show")
 % ylim([0 1])
 % xlim([solver.rRootRatio 1])
@@ -62,17 +65,18 @@ grid on
 % ylabel('F (N)')
 % legend('F_x','F_z')
 % grid on
-% 
+%
 figure(5)
 [t,r]=meshgrid(solver.psiSegment,solver.rR);
 x = r.*cos(t);
 y = r.*sin(t);
-contourf(x, y, solver.a)
+pplot = pcolor(x, y, rad2deg(solver.alpha));
 h=colorbar;
-ylabel(h,'\psi','Rotation',0,'FontSize',14)
+ylabel(h,'\alpha','Rotation',0,'FontSize',14)
 xlabel('x/R (-)')
 ylabel('y/R (-)')
 grid on
+set(pplot, "edgeColor", "none");
 % colormap("summer")
 % 
 % figure(6)

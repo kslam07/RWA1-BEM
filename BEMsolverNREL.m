@@ -1,5 +1,6 @@
-classdef BEMsolverNREL
-    %BEMsolverNREL NREL's implementation of BEM
+classdef BEMSolverNREL
+    %UNTITLED4 Summary of this class goes here
+    %   Detailed explanation goes here
     
     % user-defined
     properties
@@ -9,7 +10,7 @@ classdef BEMsolverNREL
         rRotor (1,1) double {mustBeNonnegative} = 50.0;   % radius of rotor
         rTipRatio (1,1) double {mustBeNonnegative} = 1.0  % r_tip/R_rotor
         rRootRatio (1,1) double {mustBeNonnegative} = 0.2;% r_root/R_rotor
-        nSegments (1,1) double {mustBeNonnegative} = 10;   % blade segments
+        nAnnulus (1,1) double {mustBeNonnegative} = 10;   % blade segments
         spacing (1,:) char {mustBeMember(spacing, ["0", "1", "cosine"])}...
                 = '0';                                    % segment spacing
         nBlades (1,1) double {mustBeNonnegative} = 3;     % blades /rotors
@@ -21,15 +22,30 @@ classdef BEMsolverNREL
     end
     
     % computed properties
-    properties(Access = private)
-        %twistDistribution (1,:) double; % twist angle at each blade segment
-        %chordDistribution (1,:) double; % chord length of each blade seg.
-        locSegment (1, :) double;       % radial length of each blade seg.
-        alphaSegment (1, :) double;     % local angle-of-attack
-        phiSegment (1, :) double;       % local inflow angle
+    properties%(Access = )
+        % rows: annulus; column: elements in segments (varying azimuth)
+        locSegment (1, :) double;   % radial length of each blade seg.
+        rR (:, 1) double;           % centre loc. segment in radial dir.
+        psiSegment (1, :) double;   % azimuth angle of element in annulus
+        alpha (:, :) double;        % local angle-of-attack
+        phi (:, :) double;          % inflow angle
+        aprime (:, :) double;       % tangential flow factor
+        a (:, :) double;            % axial flow factor
+        Az (:, :) double;           % azimuthal force
+        Ax (:, :) double;           % axial force
+        Cl (:, :) double;           % sectional lift coefficient
+        Cd (:, :) double;           % sectional drag coefficient
+        CT (:, :) double;           % thrust coefficients
+        CN (:, :) double;           % normal force coefficients
+        Cq (:, :) double;           % torque coefficient
+        thrustIter (:, :, :) double;   % thrust iterations
+        fTot (:, :) double;         % Prandtl correction
+        gamma (:, :) double;        % Circulation
+        areaAnnulus (:, 1) double   % area of each annuli
+        
     end
     
-    properties(Access = protected)
+    properties%(Access = protected)
         airfoilFilename = "polar_DU95W180.xlsx";
         fCL
         fCD
@@ -41,9 +57,29 @@ classdef BEMsolverNREL
     methods
         function obj = init(obj)
             % initialize the class object
-            obj = createPolarSplines(obj);
-            obj = computeSegments(obj);
-            obj.Omega = obj.TSR * obj.uInf / obj.rRotor;
+            obj         = createPolarSplines(obj);
+            obj         = computeSegments(obj);
+            obj         = computePsiArr(obj);
+            obj.Omega   = obj.TSR * obj.uInf / obj.rRotor;
+            obj.yawAngle = deg2rad(obj.yawAngle);
+            
+            % allocate memory for rest of matrices holding solutions
+            obj.alpha   = zeros(obj.nAnnulus, obj.nPsi);
+            obj.phi     = zeros(obj.nAnnulus, obj.nPsi);
+            obj.aprime  = zeros(obj.nAnnulus, obj.nPsi);
+            obj.a       = zeros(obj.nAnnulus, obj.nPsi);
+            obj.Az      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.Ax      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.CT      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.CN      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.Cq      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.rR      = zeros(1, obj.nAnnulus);
+            obj.thrustIter = zeros(obj.nAnnulus, obj.nPsi, obj.nIter);
+        end
+        
+        function obj = computePsiArr(obj)
+            psiArr = linspace(0, 2*pi, obj.nPsi);
+            obj.psiSegment = psiArr;
         end
         
         function obj = computeSegments(obj)
@@ -58,16 +94,16 @@ classdef BEMsolverNREL
             rEnd = obj.rTipRatio;  % r/R
             
             if obj.spacing == '0'    % linear spacing
-                segmentBounds = linspace(rStart, rEnd, obj.nSegments+1);
+                segmentBounds = linspace(rStart, rEnd, obj.nAnnulus+1);
 %                 lengthSegments = diff(segmentBounds);
                 
             elseif obj.spacing == "cosine"
-                segmentBounds = cosspace(rStart, rEnd, obj.nSegments+1);
+                segmentBounds = cosspace(rStart, rEnd, obj.nAnnulus+1);
 %                 lengthSegments = diff(segmentBounds);
                 
             else
                 disp("unrecognized spacing, set to default")
-                segmentBounds = linspace(rStart, rEnd, obj.nSegments+1);
+                segmentBounds = linspace(rStart, rEnd, obj.nAnnulus+1);
 %                 lengthSegments = diff(segmentBounds);
                 
             end
@@ -78,7 +114,6 @@ classdef BEMsolverNREL
             % Create fitted functions from the airfoil polar data
             % Create two spline functions to fit the CL and CD data from
             % the polar data given to the class.
-            
             data = table2array(readtable(obj.airfoilFilename));
             alphaRad = deg2rad(data(:,1));
             obj.fCL = fit(alphaRad, data(:, 2), "cubicinterp");
@@ -86,43 +121,50 @@ classdef BEMsolverNREL
             obj.amax = max(alphaRad);
             obj.amin = min(alphaRad);
         end
-        
-        function [cl, cd] = computeLoadsSegment(obj, uRotor, uTan, ...
-                              twistAngle, bladePitch, fCL, fCD)
-            theta = deg2rad(bladePitch);            % blade pitch
-            phi = atan2(uRotor, uTan);              % flow angle
-            alpha = phi - twistAngle - theta;       % angle of attack
-            
-            if alpha > obj.amax
-                cl = fCL(obj.amax); cd = fCD(obj.amax);
-            elseif alpha < obj.amin
-                cl = fCL(obj.amin); cd = fCD(obj.amin);
-            else
-                cl = fCL(alpha); cd = fCD(alpha);
-            end
+
+        function aSkew = skewWakeCorr(obj, aSegment)
+            chi = obj.yawAngle.*(1+0.6.*aSegment);
+            aSkew = aSegment.*(1+15*pi/64.*obj.rR.*tan(chi/2).*sin(obj.psiSegment));
         end
         
-        function solTotal = solveRotor(obj)
-            % solve problem for each annulus
-            solTotalArr = zeros(obj.nSegments, 7);
-            askewTotal = zeros(obj.nSegments, obj.nPsi);
-            for i = 1:obj.nSegments
-                [sol, askew] = solveStreamtube(obj, ...
-                    obj.locSegment(i), obj.locSegment(i+1), ...
-                    obj.rRootRatio, obj.rTipRatio, obj.rRotor, ...
-                    obj.uInf, obj.Omega, obj.nBlades);
-                solTotalArr(i, :) = sol(:);
-                askewTotal(i,:) = askew(:);
+        function fTot = calcPrandtlCorr(obj, phi)
+            rTip = obj.rRotor;
+            rRoot = obj.rRootRatio * obj.rRotor;
+            r = obj.rR .* obj.rRotor;
+            temp1 = obj.nBlades/2 * (rTip - r) ./ (r.*abs(sin(phi)));
+            fTip = 2/pi * acos(exp(-temp1));
+            temp1 = obj.nBlades/2 * (r-rRoot) ./ (rRoot * abs(sin(phi)));
+            fRoot = 2/pi * acos(exp(-temp1));
+            fTot = fTip .* fRoot; 
+        end
+
+        function [cAx, cAz, clSegment, cdSegment, alphaSegment] ...
+                = computeLoadsSegment(obj, uRotor, uTan, twistAngle)   
             
-            solTotal = struct("rR", solTotalArr(:,1), "a", solTotalArr(:,2), ...
-                    "aprime", solTotalArr(:,3), "askew", askewTotal, ...
-                    "nAx", solTotalArr(:,4), "nAz", solTotalArr(:,5), ...
-                    "fTot", solTotalArr(:,7), "CT", solTotalArr(:,6));
-            end
+            theta = deg2rad(obj.bladePitch);                % blade pitch
+            phiSegment = atan2(uRotor, uTan);               % flow angle
+            alphaSegment = phiSegment - twistAngle - theta; % AoA
+            
+            % compute Cl and Cd for all elements in annulus
+            clSegment = reshape(obj.fCL(alphaSegment), ...
+                [obj.nAnnulus, obj.nPsi]);
+            cdSegment = reshape(obj.fCD(alphaSegment), ...
+                [obj.nAnnulus, obj.nPsi]);
+            
+            % take CL and CD from highest alpha in data if alpha is higher
+            clSegment(alphaSegment > obj.amax) = obj.fCL(obj.amax);
+            cdSegment(alphaSegment > obj.amax) = obj.fCD(obj.amax);
+            
+            % take CL and CD from lowest alpha in data if alpha is lower
+            clSegment(alphaSegment < obj.amin) = obj.fCL(obj.amin);
+            cdSegment(alphaSegment < obj.amin) = obj.fCD(obj.amin);
+            
+            % compute the normal and tangential coefficients
+            cAz = clSegment.*sin(phiSegment) - cdSegment.*cos(phiSegment);
+            cAx = clSegment.*cos(phiSegment) + cdSegment.*sin(phiSegment);
         end
         
-        function [sol, askew] = solveStreamtube( ...
-                obj, rR1, rR2, rRoot, rTip, rRotor, uInf, Omega, nBlades)
+        function obj = solveStreamtube(obj)
             % solve balance of momentum between blade element load and
             % loading in the streamtube
             % rR1      : location of inner boundary of blade segment 
@@ -134,60 +176,114 @@ classdef BEMsolverNREL
             % Omega    : rotational velocity
             % nBlades  : number of rotor blades
             
-            rR = (rR1 + rR2)/2;                 % center of blade segment
-            twistAngle = obj.computeTwists(rR); % twist of blade seg.
-            chord = obj.computeChordLength(rR);
-            a = 0.3; aprime = 0;  % flow factors
-            psiArr = linspace(0, 2*pi, obj.nPsi);
-            for i = 1:obj.nIter
+            % center of blade segment
+            obj.rR = (obj.locSegment(1:end-1)+ obj.locSegment(2:end))/2;
+            % twist of blade seg.
+            twistAngle = obj.computeTwists(obj.rR);
+            % chord length
+            chord = obj.computeChordLength(obj.rR); 
+            % area of blade elements with shape (element x annulus)
+            areaSegment = (pi * ((obj.locSegment(2:end)*obj.rRotor).^2 ...
+                - (obj.locSegment(1:end-1)*obj.rRotor).^2))';
+            % segment radial length
+            dR = obj.rRotor * (obj.locSegment(2:end)- ...
+                 obj.locSegment(1:end-1))';
+            
+            % initial flow factors
+            aSegment = 0.3 * ones(obj.nAnnulus, obj.nPsi);  
+            apSegment = zeros(obj.nAnnulus, obj.nPsi);     
+            
+            for j = 1:obj.nIter
+                % compute velocities for elements in annulus
+                % axial velocity
+                uRotor = obj.uInf*cos(obj.yawAngle)*(1-aSegment);
+                % tang. velocity
+                uTan = (1+apSegment).*(obj.Omega.*obj.rR*obj.rRotor ...
+                    - obj.uInf*sin(obj.yawAngle)*cos(obj.psiSegment));
+                % relative velocity
+                uPer = sqrt(uRotor.^2 + uTan.^2);
+                % inflow angles of each segment
+                phiSegment = atan2(uRotor, uTan);
+                % compute non-dim loads for elements in annulus
+                [cAx, cAz, ClSegment, CdSegment, alphaSegment] ...
+                    = obj.computeLoadsSegment(uRotor, uTan, twistAngle);
+                % dimensionalize it but leave density out (cancels out)
+                % axial force
+                AxSegment = cAx.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
+                % azimuthal force
+                AzSegment = cAz.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
+                % thrust coefficient
+                CTSegment = 4*aSegment .* sqrt(1-aSegment.* ...
+                    (2*cos(obj.psiSegment) - aSegment));
+
+                % log axial force each iteration
+                obj.thrustIter(:,:,j) = AxSegment;
                 
-                % calculate velocity and loads 
-                uRotor = uInf*(1-a);               % axial velocity
-                uTan = (1+aprime)*Omega*rR*rRotor; % tangential velocity
-%                 qDyn = 0.5*obj.rho*uPer^2;
-                [cl, cd] = obj.computeLoadsSegment(uRotor, uTan, ...
-                                   twistAngle, obj.bladePitch, ...
-                                   obj.fCL, obj.fCD);
+                % local solidity
+                sigmaR = obj.nBlades*chord ./ (2*pi*obj.rR*obj.rRotor);
+                fTotSegment = obj.calcPrandtlCorr(phiSegment);
                 
-                % calculate inflow angle from velocities
-                phi = atan2(uRotor, uTan);
-                sigmaP = nBlades*chord/(2*pi*rR*rRotor);    %local solidity
-                CT = 1+sigmaP*(1-a)^2*(cl*cos(phi)+cd*sin(phi))/ ... 
-                     sin(phi)^2;
+                % compute a
+                kappa   = sigmaR .*cAx ./ (4*fTotSegment.*sin(phiSegment).^2);
+                kappap  = sigmaR .*cAz ./ (4*fTotSegment.*sin(phiSegment)...
+                    .*cos(phiSegment));
+
+                % if kappa > 2/3
+                gamma1 = 2*fTotSegment.*kappa - (10/9-fTotSegment);
+                gamma2 = 2*fTotSegment.*kappa - fTotSegment.* ...
+                    (4/3-fTotSegment);
+                gamma3 = 2*fTotSegment.*kappa - (25/9-2*fTotSegment);
+                aip1Segment = (gamma1-sqrt(gamma2))./gamma3;
+                % if kappa < 2/3
+                aip1Segment(kappa <= 2/3) = kappa(kappa <=2/3) ./ ...
+                    (1+kappa(kappa<=2/3));
+                % correct for skewed wake
+                aip1Segment = obj.skewWakeCorr(aip1Segment);
+                % limit updates
+                aip1Segment(aip1Segment > 0.95) = 0.95;
+                % compute a'
+                apip1Segment = kappap ./ (1-kappap);
                 
-                % Tip and root correction
-                fTot = obj.calcPrandtlTipCorr(rR, rRoot, rRotor, nBlades, ...
-                       phi);
-                 
-                % compute a and aprime
-                if CT > 0.96*fTot
-                    a_ip1 = (18*fTot-20-3*sqrt(CT*(50-36*fTot)+12*fTot...
-                            *(3*fTot-4)))/(36*fTot-50);
-                else
-                    a_ip1 = (1+4*fTot*sin(phi)^2/ ...
-                             (sigmaP*(cl*cos(phi)+cd*sin(phi))))^(-1);
-                end
+                aSegment = 0.75*aSegment + 0.25*aip1Segment;
+                apSegment = 0.75*apSegment + 0.25*apip1Segment;
                 
-                aprime_ip1 = (-1+4*fTot*sin(phi)*cos(phi)/ ...
-                             (sigmaP*(cl*sin(phi)-cd*cos(phi))))^(-1);
+                % compute CT from a
                 
-                if a_ip1 > 0.95
-                    a_ip1 = 0.95;
-                end
                 
-                if abs(a - a_ip1) < obj.atol && ... 
-                   abs(aprime - aprime_ip1) < obj.atol
+                % finish iterating if error is below tolerance
+                if all(abs(aSegment - aip1Segment) < obj.atol, "all") &&... 
+                   all(abs(apSegment - apip1Segment) < obj.atol, "all")
                     break;
                 end
-                
-                % update flow factors
-                a = 0.75 * a + 0.25 * a_ip1;
-                aprime = 0.75 * aprime + 0.25 * aprime_ip1;
-                
             end
-            % apply skewing factor / correction for yaw
-            askew = obj.skewWakeCorr(a, rR, obj.yawAngle, psiArr);
-            sol = [rR, a, aprime, cl, cd, CT, fTot];
+            
+            % copy last value in col array to remove zeros
+            obj.thrustIter(obj.thrustIter==0)= ...
+                obj.thrustIter(find(obj.thrustIter,1,'last'));
+            % compute circulation from uRotor and uTan
+            obj.gamma = 0.5*sqrt(uRotor.^2+uTan.^2).*ClSegment.*chord/...
+                (pi*obj.uInf^2/obj.Omega/obj.nBlades);
+            
+            % compute other parameters
+            % torque coefficient
+            CQSegment = AzSegment ./ (0.5*areaSegment*obj.uInf^2);
+            % normal coefficient
+            CNSegment = CQSegment ./ obj.rR;
+            
+            % store final result in corresponding property
+            obj.areaAnnulus = areaSegment;
+            obj.alpha(:, :) = alphaSegment;
+            obj.phi(:, :)   = phiSegment;
+            obj.aprime(:, :)= apSegment;
+            obj.a(:, :)     = aSegment;
+            obj.Ax(:, :)    = AxSegment;
+            obj.Az(:, :)    = AzSegment;
+            obj.Cl          = ClSegment;
+            obj.Cd          = CdSegment;
+            obj.CT(:, :)    = CTSegment;
+            obj.CN(:, :)    = CNSegment;
+            obj.Cq(:, :)    = CQSegment;
+            obj.fTot(:, :)  = fTotSegment;
         end
     end
     
@@ -202,38 +298,6 @@ classdef BEMsolverNREL
             % CHECKED
             % Determine the twist angle distribution for each blade segment
             twistAngle = deg2rad(14*(1-rR));
-        end
-        
-        function fTot = calcPrandtlTipCorr(rR, rRoot, rRotor, nBlades, phi)
-            % CHECKED
-            % calculate Prandtl Tip Corrections FACTORS!
-            r = rR * rRotor;
-            rHub = rRoot * rRotor;
-            temp1 = -nBlades/2*(rRotor - r)/(r*abs(sin(phi)));
-            fTip  = 2/pi*acos(exp(temp1));
-            temp1 = -nBlades/2*(r - rHub)/(r*abs(sin(phi)));
-            fRoot = 2/pi*acos(exp(temp1));
-            fTot = fRoot*fTip;
-            if fTot < 1e-4 
-                fTot = 1e-4;  % avoide divide by zero or blow-up
-            elseif isnan(fTot) == true
-                fTot = 1e-4;
-            end
-        end
-
-        function a = calcGlauertCorr(CT)
-            % CHECKED
-            % computes the Glauert correction for heavily loaded rotors
-            if CT < (2*sqrt(1.816)-1.816)
-                a = 0.5 - sqrt(1-CT)/2;
-            else
-                a = 1+(CT-1.816)/(4*sqrt(1.816)-4);
-            end
-        end
-        
-        function aSkew = skewWakeCorr(a, rR, gamma, psi)
-            chi = gamma*(1+0.6*a);
-            aSkew = a*(1+15*pi/32*rR*tan(chi/2).*cos(psi));
         end
     end
 end

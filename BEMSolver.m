@@ -52,9 +52,6 @@ classdef BEMSolver
         amax
         amin
         Omega
-        alphas
-        CL
-        CD
     end
     
     methods
@@ -123,23 +120,12 @@ classdef BEMSolver
             obj.fCD = fit(alphaRad, data(:, 3), "cubicinterp");
             obj.amax = max(alphaRad);
             obj.amin = min(alphaRad);
-            obj.alphas = alphaRad;
-            obj.CL = data(:, 2);
-            obj.CD = data(:, 3);
         end
-        
-%         function [clSegment, cdSegment] = interpolatePolars(obj, aq)
-%             clSegment = interp1(obj.alphas, obj.CL, aq, "linear");
-%             cdSegment = interp1(obj.alphas, obj.CD, aq, "linear");
-%             
-%             % correct if aq (query alpha) is beyond alpha in data
-%             clSegment(aq > 
-%             
-%         end
 
-        function aSkew = skewWakeCorr(obj, aSegment, rR, psiSegment)
+        function aSkew = skewWakeCorr(obj, aSegment)
             chi = obj.yawAngle.*(1+0.6.*aSegment);
-            aSkew = aSegment.*(1+15*pi/64.*rR.*tan(chi/2).*sin(psiSegment));
+            aSkew = aSegment.*(1+15*pi/64.*obj.rR.*tan(chi/2).*...
+                sin(obj.psiSegment));
         end
 
         function [cAx, cAz, clSegment, cdSegment, alphaSegment] ...
@@ -223,6 +209,8 @@ classdef BEMSolver
                 % compute new iterant a
                 aip1Segment = obj.calcGlauertCorr(CTSegment, sigmaR, ...
                     phiSegment, cAx);
+                % wake corr
+                aip1Segment = obj.skewWakeCorr(aip1Segment);
                 fTotSegment = obj.calcPrandtlTipCorr(obj.rR, ...
                     obj.rRootRatio, obj.rTipRatio, obj.TSR, ...
                     obj.nBlades, aip1Segment);

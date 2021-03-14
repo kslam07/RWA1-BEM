@@ -1,35 +1,146 @@
 %% ability to pass args when constructing class looks like a PitA
 %  do this instead
-a = BEMsolverNREL;
-a.nBlades = 3;
-a.TSR = 6;
-a.nSegments = 50;
-a.spacing = "0";
-a.atol = 1e-6;
-a.nIter = 100;
-a.bladePitch = -2;
-a.nPsi = 0;
+solver = BEMSolverNREL;
+solver.nBlades = 3;
+solver.TSR = 6;
+solver.nAnnulus = 50;
+solver.spacing = "0";
+solver.atol = 1e-4;
+solver.nIter = 100;
+solver.bladePitch = 0;
+solver.nPsi = 50;
+solver.yawAngle = 30;
+solver.uInf = 10;
 
 %% Initialise some other attributes
-a = a.init();
+solver = solver.init();
 
 %% run the BEM
-res = a.solveRotor();
+solver = solver.solveStreamtube();
 
-%% post-process results
-figure
-plot(res.rR, res.a, res.rR, res.aprime);
-grid on
-
+%% post-process solverults
 % figure
-% plot(res.rR, res.fTot);
+% plot(solver.rR, rad2deg(solver.alpha), "linewidth", 1.3);
+
+figure
+hold on
+for i = 1:solver.nPsi
+    plot(solver.rR, solver.a(:, i), solver.rR, solver.aprime(:, i), ...
+        '--', "linewidth", 1.3, "DisplayName", ...
+        ['yaw:' num2str(rad2deg(solver.psiSegment(i)))]);
+end
+figure(50)
+[~, idx] = min(abs(solver.rR - 0.9));
+plot(rad2deg(solver.psiSegment), solver.a(idx, :)); 
+% legend("show")
+% ylim([0 1])
+% xlim([solver.rRootRatio 1])
+% grid
+% 
+% figure(1)
+% plot(solver.rR(:,1), solver.alpha(:,1)*180/pi, solver.rR(:,1), solver.phi(:,1)*180/pi);
+% xlabel('r/R (-)')
+% ylabel('angle (deg)')
+% legend('\alpha', "\phi")
+% grid on
+% 
+% figure(2)
+% plot(solver.rR, solver.a, solver.rR, solver.aprime);
+% xlabel('r/R (-)')
+% ylabel('Induced velocity (-)')
+% legend('a', "a'")
+% grid on
+% 
+% figure(3)
+% plot(solver.rR, solver.CT), solver.rR, solver.Cq, solver.rR, solver.CN); % coefficients
+% xlabel('r/R (-)')
+% ylabel('C (-)')
+% legend('C_T'), 'C_Q', 'C_N')
 % grid on
 
-% aSkew
-% nPsi = linspace(0, 2*pi, a.nPsi);
-% x = res.rR' .* cos(nPsi);
-% y = res.rR' .* sin(nPsi);
+% figure(4)
+% plot(solver.rR(:,1), solver.Ax(:,1), solver.rR, solver.Az); %absolute forces
+% xlabel('r/R (-)')
+% ylabel('F (N)')
+% legend('F_x','F_z')
+% grid on
 % 
+figure(5)
+[t,r]=meshgrid(solver.psiSegment,solver.rR);
+x = r.*cos(t);
+y = r.*sin(t);
+contourf(x, y, rad2deg(solver.alpha))
+h=colorbar;
+ylabel(h,'\alpha','Rotation',0,'FontSize',14)
+xlabel('x/R (-)')
+ylabel('y/R (-)')
+grid on
+% colormap("summer")
+% 
+% figure(6)
+% plot(squeeze(sum(solver.thrustIter(:,2,:),1))) % might need to add cutoff for plot
+% xlabel('Iteration (-)')
+% ylabel('T (N)')
+% grid on
+% 
+% figure(7)
+% solver = BEMSolver;
+% solver.nAnnulus = 10; % influence number of annuli
+% solver = solver.init();
+% solver = solver.solveStreamtube();
+% plot(solver.rR, solver.CT,'o');
+% hold on
+% solver = BEMSolver;
+% solver.nAnnulus = 50;
+% solver = solver.init();
+% solver = solver.solveStreamtube();
+% plot(solver.rR, solver.CT,'x');
+% hold on
+% solver = BEMSolver;
+% solver.nAnnulus = 100;
+% solver = solver.init();
+% solver = solver.solveStreamtube();
+% plot(solver.rR, solver.CT);
+% xlabel('r/R (-)')
+% ylabel('C_T (-)')
+% legend('N_{segments}=10','N_{segments}=50','N_{segments}=100','Location','south')
+% grid on
+% 
+% figure(8)
+% solver.spacing='0';
+% solver = solver.init();
+% solver = solver.solveStreamtube();
+% plot(solver.rR, solver.CT);
+% hold on
+% solver.spacing = 'cosine';
+% solver = solver.init();
+% solver = solver.solveStreamtube();
+% plot(solver.rR, solver.CT);
+% xlabel('r/R (-)')
+% ylabel('C_T (-)')
+% legend('Equal spacing', 'Cosine spacing','Location','south')
+% grid on
+% 
+% figure(9)
+% plot(solver.rR, solver.fTot); % correction
+% xlabel('r/R (-)')
+% ylabel('f (-)')
+% grid on
+% 
+% figure(10) % made nondimensional with (np.pi*Uinf**2/(NBlades*Omega)
+% % plot(solver.rR,solver.solver.*4.*(1-solver.a)./(1+solver.aprime))
+% % hold on
+% plot(solver.rR,solver.gamma,'x')
+% xlabel('r/R (-)')
+% ylabel('\Gamma (-)')
+% grid on
+
+%% aSkew
+% nPsi = linspace(0, 2*pi, solver.nPsi);
+% x = solver.rR' .* cos(nPsi);
+% y = solver.rR' .* sin(nPsi);
+% 
+%
 % [X, Y] = meshgrid(x, y);
 % figure
 
@@ -51,7 +162,7 @@ grid on
 % end
 % 
 % function CT = CTfunction(a, glauert)
-%     CT = 4.*a.*(1-a);
+%     CT = 4.*solver.*(1-a);
 %     if glauert
 %         CT1=1.816;
 %         a1=1-sqrt(CT1)/2;
