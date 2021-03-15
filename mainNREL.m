@@ -36,97 +36,100 @@ plot(rad2deg(solver.psiSegment), solver.a(idx, :));
 % ylim([0 1])
 % xlim([solver.rRootRatio 1])
 % grid
-% 
+
+%% Plots for report
 % figure(1)
-% plot(solver.rR(:,1), solver.alpha(:,1)*180/pi, solver.rR(:,1), solver.phi(:,1)*180/pi);
+% plot(solver.rR, mean(solver.alpha,2)*180/pi, solver.rR, mean(solver.phi,2)*180/pi);
 % xlabel('r/R (-)')
 % ylabel('angle (deg)')
 % legend('\alpha', "\phi")
 % grid on
-% 
+
 % figure(2)
-% plot(solver.rR, solver.a, solver.rR, solver.aprime);
+% plot(solver.rR, mean(solver.a,2), solver.rR, mean(solver.aprime,2));
 % xlabel('r/R (-)')
 % ylabel('Induced velocity (-)')
 % legend('a', "a'")
 % grid on
-% 
+
 % figure(3)
-% plot(solver.rR, solver.CT), solver.rR, solver.Cq, solver.rR, solver.CN); % coefficients
+% plot(solver.rR, mean(solver.CT,2), solver.rR, mean(solver.Cq,2), solver.rR, mean(solver.CN,2)); % coefficients
 % xlabel('r/R (-)')
 % ylabel('C (-)')
-% legend('C_T'), 'C_Q', 'C_N')
+% legend('C_T', 'C_Q', 'C_N')
 % grid on
 
 % figure(4)
-% plot(solver.rR(:,1), solver.Ax(:,1), solver.rR, solver.Az); %absolute forces
+% plot(solver.rR, mean(solver.Ax(:,1)*solver.rho,2), solver.rR, mean(solver.Az*solver.rho,2)); %absolute forces
 % xlabel('r/R (-)')
 % ylabel('F (N)')
-% legend('F_x','F_z')
+% legend('F_x','F_z','Location','northwest')
 % grid on
-% 
-figure(5)
-[t,r]=meshgrid(solver.psiSegment,solver.rR);
-x = r.*cos(t);
-y = r.*sin(t);
-contourf(x, y, rad2deg(solver.alpha))
-h=colorbar;
-ylabel(h,'\alpha','Rotation',0,'FontSize',14)
-xlabel('x/R (-)')
-ylabel('y/R (-)')
-grid on
-% colormap("summer")
-% 
+
+% figure(5)
+% [t,r]=meshgrid(solver.psiSegment,solver.rR);
+% x = r.*cos(t);
+% y = r.*sin(t);
+% pplot = pcolor(x, y, rad2deg(solver.alpha));
+% h=colorbar;
+% ylabel(h,'\alpha','Rotation',0,'FontSize',14)
+% xlabel('x/R (-)')
+% ylabel('y/R (-)')
+% grid on
+% set(pplot, "edgeColor", "none");
+% colormap('default')
+% % colormap("summer")
+
 % figure(6)
 % plot(squeeze(sum(solver.thrustIter(:,2,:),1))) % might need to add cutoff for plot
 % xlabel('Iteration (-)')
 % ylabel('T (N)')
 % grid on
-% 
+
 % figure(7)
 % solver = BEMSolver;
 % solver.nAnnulus = 10; % influence number of annuli
 % solver = solver.init();
 % solver = solver.solveStreamtube();
-% plot(solver.rR, solver.CT,'o');
+% plot(solver.rR, mean(solver.CT,2),'o','Color','red');
 % hold on
 % solver = BEMSolver;
 % solver.nAnnulus = 50;
 % solver = solver.init();
 % solver = solver.solveStreamtube();
-% plot(solver.rR, solver.CT,'x');
+% plot(solver.rR, mean(solver.CT,2),'x','Color','black');
 % hold on
 % solver = BEMSolver;
 % solver.nAnnulus = 100;
 % solver = solver.init();
 % solver = solver.solveStreamtube();
-% plot(solver.rR, solver.CT);
+% plot(solver.rR, mean(solver.CT,2),'Color','blue');
 % xlabel('r/R (-)')
 % ylabel('C_T (-)')
 % legend('N_{segments}=10','N_{segments}=50','N_{segments}=100','Location','south')
 % grid on
-% 
+
 % figure(8)
 % solver.spacing='0';
 % solver = solver.init();
 % solver = solver.solveStreamtube();
-% plot(solver.rR, solver.CT);
+% plot(solver.rR, mean(solver.CT,2));
 % hold on
 % solver.spacing = 'cosine';
 % solver = solver.init();
 % solver = solver.solveStreamtube();
-% plot(solver.rR, solver.CT);
+% plot(solver.rR, mean(solver.CT,2));
 % xlabel('r/R (-)')
 % ylabel('C_T (-)')
 % legend('Equal spacing', 'Cosine spacing','Location','south')
 % grid on
-% 
+
 % figure(9)
 % plot(solver.rR, solver.fTot); % correction
 % xlabel('r/R (-)')
 % ylabel('f (-)')
 % grid on
-% 
+
 % figure(10) % made nondimensional with (np.pi*Uinf**2/(NBlades*Omega)
 % % plot(solver.rR,solver.solver.*4.*(1-solver.a)./(1+solver.aprime))
 % % hold on
@@ -134,6 +137,38 @@ grid on
 % xlabel('r/R (-)')
 % ylabel('\Gamma (-)')
 % grid on
+
+% p=101325;
+% rho=1.225;
+% pt=p+0.5*rho*solver.uInf^2;
+% v2=solver.uInf*(1-mean(solver.a,2));
+% p2=pt-0.5*rho*v2.^2;
+% 
+% pressureJump=sum(solver.Ax*solver.rho,2)./solver.areaAnnulus;
+% v4=solver.uInf*(1-2*mean(solver.a,2));
+% p3=p2-pressureJump;
+% pt3=p3+0.5*rho*v2.^2;
+% p4=pt3-0.5*rho*v4.^2.
+% 
+% enthalpy1=ones(1,solver.nAnnulus)*(p/rho+solver.uInf^2/2);
+% enthalpy2=mean(ones(1,solver.nAnnulus).*(p2/rho+v2.^2/2),2);
+% enthalpy3=mean(ones(1,solver.nAnnulus).*(p3/rho+v2.^2/2),2);
+% enthalpy4=mean(ones(1,solver.nAnnulus).*(p4/rho+v4.^2/2),2);
+% enthalpy3mean=mean(mean(enthalpy3,2));
+
+% data=enthalpy(solver);
+% 
+% figure(11)
+% hold on
+% plot(solver.rR,data(1,:),'HandleVisibility','off')
+% plot(solver.rR,data(2,:),'DisplayName','Station 1 & 2')
+% plot(solver.rR,data(3,:),'DisplayName','Station 3')
+% plot(solver.rR,data(4,:),'HandleVisibility','off')
+% plot(solver.rR,data(5,:),'DisplayName','Station 4')
+% legend()
+% xlabel('r/R (-)')
+% ylabel('h_s (J/kg)')
+% ylim([min(min(data(4,:)))*0.99,max(data(:,1))*1.01])
 
 %% aSkew
 % nPsi = linspace(0, 2*pi, solver.nPsi);
