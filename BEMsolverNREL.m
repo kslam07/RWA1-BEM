@@ -250,9 +250,6 @@ classdef BEMSolverNREL
                 aSegment = 0.75*aSegment + 0.25*aip1Segment;
                 apSegment = 0.75*apSegment + 0.25*apip1Segment;
                 
-                % compute CT from a
-                
-                
                 % finish iterating if error is below tolerance
                 if all(abs(aSegment - aip1Segment) < obj.atol, "all") &&... 
                    all(abs(apSegment - apip1Segment) < obj.atol, "all")
