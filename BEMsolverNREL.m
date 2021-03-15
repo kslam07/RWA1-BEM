@@ -213,8 +213,7 @@ classdef BEMSolverNREL
                 % azimuthal force
                 AzSegment = cAz.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
                 % thrust coefficient
-                CTSegment = 4*aSegment .* sqrt(1-aSegment.* ...
-                    (2*cos(obj.psiSegment) - aSegment));
+                CTSegment = AxSegment ./ (0.5*areaSegment*obj.uInf^2);     
 
                 % log axial force each iteration
                 obj.thrustIter(:,:,j) = AxSegment;
@@ -237,6 +236,10 @@ classdef BEMSolverNREL
                 % if kappa < 2/3
                 aip1Segment(kappa <= 2/3) = kappa(kappa <=2/3) ./ ...
                     (1+kappa(kappa<=2/3));
+                % if kappa > 1
+                aip1Segment(kappa>1 & phiSegment<0) = kappa(kappa>1 & ...
+                    phiSegment<0) ./ (kappa(kappa>1 & phiSegment<0)-1);
+                
                 % correct for skewed wake
                 aip1Segment = obj.skewWakeCorr(aip1Segment);
                 % limit updates
