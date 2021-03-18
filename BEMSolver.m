@@ -207,8 +207,7 @@ classdef BEMSolver
                 % local solidity
                 sigmaR = obj.nBlades*chord ./ (2*pi*obj.rR*obj.rRotor);
                 % compute new iterant a
-                aip1Segment = obj.calcGlauertCorr(CTSegment, sigmaR, ...
-                    phiSegment, cAx);
+                aip1Segment = obj.calcGlauertCorr(CTSegment);
                 % wake corr
                 aip1Segment = obj.skewWakeCorr(aip1Segment);
                 fTotSegment = obj.calcPrandtlTipCorr(obj.rR, ...
@@ -299,16 +298,16 @@ classdef BEMSolver
             fTot(fTot < 1e-4 | isnan(fTot)) = 1e-4;
         end
 
-        function a = calcGlauertCorr(CT, sigmaR, phi, cAx)
+        function a = calcGlauertCorr(CT)
             % computes the Glauert correction for heavily loaded rotors
             CT1 = 1.816;
             CT2 = 2*sqrt(CT1)-CT1;
 %             compute a without correction CT1 = 1.816
 %             kappa = (sigmaR.*cAx ./ (4*sin(phi).^2));
-%             a = kappa ./ (1+kappa);
+%             a = kappa ./ (kappa + 1);
             
             % correct a with Glauert correction
-%             a(CT >= CT2) = 1+(CT(CT>=CT2)-CT1)/(4*sqrt(CT1)-4);
+%             a(CT >= CT2) = 1+(CT(CT>=CT2)-CT1)./(4*sqrt(CT1)-4);
             % compute a with Glauert correction
             a = 1+(CT-CT1) ./ (4*sqrt(CT1)-4); 
             % if blade segment is NOT heavily loaded:
