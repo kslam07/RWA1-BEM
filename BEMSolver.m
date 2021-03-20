@@ -74,6 +74,7 @@ classdef BEMSolver
             obj.CT      = zeros(obj.nAnnulus, obj.nPsi);
             obj.CN      = zeros(obj.nAnnulus, obj.nPsi);
             obj.Cq      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.fTot      = zeros(obj.nAnnulus, obj.nPsi);
             obj.rR      = zeros(1, obj.nAnnulus);
             obj.thrustIter = zeros(obj.nAnnulus, obj.nPsi, obj.nIter);
         end

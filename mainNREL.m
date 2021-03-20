@@ -7,7 +7,7 @@ solver.nAnnulus = 50;
 solver.spacing = "0";
 solver.atol = 1e-4;
 solver.nIter = 100;
-solver.bladePitch = 0;
+solver.bladePitch = -2;
 solver.nPsi = 50;
 solver.yawAngle = 30;
 solver.uInf = 10;
@@ -22,28 +22,28 @@ solver = solver.solveStreamtube();
 % figure
 % plot(solver.rR, rad2deg(solver.alpha), "linewidth", 1.3);
 
-figure
-hold on
-for i = 1:solver.nPsi
-    plot(solver.rR, solver.a(:, i), solver.rR, solver.aprime(:, i), ...
-        '--', "linewidth", 1.3, "DisplayName", ...
-        ['yaw:' num2str(rad2deg(solver.psiSegment(i)))]);
-end
-figure(50)
-[~, idx] = min(abs(solver.rR - 0.9));
-plot(rad2deg(solver.psiSegment), solver.a(idx, :)); 
+% figure
+% hold on
+% for i = 1:solver.nPsi
+%     plot(solver.rR, solver.a(:, i), solver.rR, solver.aprime(:, i), ...
+%         '--', "linewidth", 1.3, "DisplayName", ...
+%         ['yaw:' num2str(rad2deg(solver.psiSegment(i)))]);
+% end
+% figure(50)
+% [~, idx] = min(abs(solver.rR - 0.9));
+% plot(rad2deg(solver.psiSegment), solver.a(idx, :)); 
 % legend("show")
 % ylim([0 1])
 % xlim([solver.rRootRatio 1])
 % grid
 
 %% Plots for report
-% figure(1)
-% plot(solver.rR, mean(solver.alpha,2)*180/pi, solver.rR, mean(solver.phi,2)*180/pi);
-% xlabel('r/R (-)')
-% ylabel('angle (deg)')
-% legend('\alpha', "\phi")
-% grid on
+figure(1)
+plot(solver.rR, mean(solver.alpha,2)*180/pi, solver.rR, mean(solver.phi,2)*180/pi);
+xlabel('r/R (-)')
+ylabel('angle (deg)')
+legend('\alpha', "\phi")
+grid on
 
 % figure(2)
 % plot(solver.rR, mean(solver.a,2), solver.rR, mean(solver.aprime,2));
