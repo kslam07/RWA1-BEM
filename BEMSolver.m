@@ -74,6 +74,7 @@ classdef BEMSolver
             obj.CT      = zeros(obj.nAnnulus, obj.nPsi);
             obj.CN      = zeros(obj.nAnnulus, obj.nPsi);
             obj.Cq      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.CP      = zeros(obj.nAnnulus, obj.nPsi);
             obj.fTot      = zeros(obj.nAnnulus, obj.nPsi);
             obj.rR      = zeros(1, obj.nAnnulus);
             obj.thrustIter = zeros(obj.nAnnulus, obj.nPsi, obj.nIter);
@@ -267,8 +268,8 @@ classdef BEMSolver
             obj.phi(:, :)   = phiSegment;
             obj.aprime(:, :)= apSegment;
             obj.a(:, :)     = aSegment;
-            obj.Ax(:, :)    = AxSegment / (0.5 * obj.uInf^2 * obj.rRotor);
-            obj.Az(:, :)    = AzSegment / (0.5 * obj.uInf^2 * obj.rRotor);
+            obj.Ax(:, :)    = AxSegment;
+            obj.Az(:, :)    = AzSegment;
             obj.Cl          = ClSegment;
             obj.Cd          = CdSegment;
             obj.CT(:, :)    = CTSegment;
