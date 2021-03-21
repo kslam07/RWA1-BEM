@@ -38,7 +38,8 @@ classdef BEMSolver
         CT (:, :) double;           % thrust coefficients
         CN (:, :) double;           % normal force coefficients
         Cq (:, :) double;           % torque coefficient
-        thrustIter (:, :, :) double;   % thrust iterations
+        CP (:, :) double;           % power coefficient
+        thrustIter (:, :, :) double;% thrust iterations
         fTot (:, :) double;         % Prandtl correction
         gamma (:, :) double;        % Circulation
         areaAnnulus (:, 1) double   % area of each annuli
@@ -73,6 +74,7 @@ classdef BEMSolver
             obj.CT      = zeros(obj.nAnnulus, obj.nPsi);
             obj.CN      = zeros(obj.nAnnulus, obj.nPsi);
             obj.Cq      = zeros(obj.nAnnulus, obj.nPsi);
+            obj.fTot      = zeros(obj.nAnnulus, obj.nPsi);
             obj.rR      = zeros(1, obj.nAnnulus);
             obj.thrustIter = zeros(obj.nAnnulus, obj.nPsi, obj.nIter);
         end
@@ -251,6 +253,11 @@ classdef BEMSolver
             CQSegment = AzSegment ./ (0.5*areaSegment*obj.uInf^2);
             % normal coefficient
             CNSegment = CQSegment ./ obj.rR;
+            % power coefficient
+%             CPSegment = AxSegment .* apSegment .* dR .* obj.nBlades .* ...
+%                 obj.rRotor .* obj.Omega ./ (0.5 * obj.uInf^3 .* pi .* ...
+%                 obj.rRotor;
+            CPSegment = 4 .* apSegment .* (1-aSegment).^2;
             
             % store final result in corresponding property
             obj.areaAnnulus = areaSegment;
@@ -258,14 +265,15 @@ classdef BEMSolver
             obj.phi(:, :)   = phiSegment;
             obj.aprime(:, :)= apSegment;
             obj.a(:, :)     = aSegment;
-            obj.Ax(:, :)    = AxSegment;
-            obj.Az(:, :)    = AzSegment;
+            obj.Ax(:, :)    = AxSegment / (0.5 * obj.uInf^2 * obj.rRotor);
+            obj.Az(:, :)    = AzSegment / (0.5 * obj.uInf^2 * obj.rRotor);
             obj.Cl          = ClSegment;
             obj.Cd          = CdSegment;
             obj.CT(:, :)    = CTSegment;
             obj.CN(:, :)    = CNSegment;
             obj.Cq(:, :)    = CQSegment;
             obj.fTot(:, :)  = fTotSegment;
+            obj.CP(:, :)    = CPSegment;
         end
     end
     
