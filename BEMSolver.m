@@ -186,6 +186,7 @@ classdef BEMSolver
             apSegment = zeros(obj.nAnnulus, obj.nPsi);     
             
             for j = 1:obj.nIter
+                % COMPUTE LOADS
                 % compute velocities for elements in annulus
                 % axial velocity
                 uRotor = obj.uInf*cos(obj.yawAngle)*(1-aSegment);
@@ -206,28 +207,29 @@ classdef BEMSolver
                 % thrust coefficient
                 CTSegment = AxSegment ./ (0.5*areaSegment*obj.uInf^2);                  
                 
+                % FLOW FACTORS
                 % local solidity
                 sigmaR = obj.nBlades*chord ./ (2*pi*obj.rR*obj.rRotor);
                 % compute new iterant a
                 aip1Segment = obj.calcGlauertCorr(CTSegment);
-                % wake corr
+                % compute new iterant a'; method on BS did not result in
+                % proper results (used for a' later)
+                kappap = sigmaR.*cAz./(4*sin(phiSegment).*cos(phiSegment));
+                
+                % CORRECTIONS
+                % wake corr for a
                 aip1Segment = obj.skewWakeCorr(aip1Segment);
+                % Prandtl correction for heavily loaded sections
                 fTotSegment = obj.calcPrandtlTipCorr(obj.rR, ...
                     obj.rRootRatio, obj.rTipRatio, obj.TSR, ...
                     obj.nBlades, aip1Segment);
-                
-                % Prandtl correction for heavily loaded sections
+                % apply correction to a and a'
                 aip1Segment = aip1Segment./fTotSegment;
+                apip1Segment = kappap./(1-kappap)./ fTotSegment;
                 % limit flow factor for numerical stability
                 aip1Segment(aip1Segment > 0.95) = 0.95;
                 % update a (scheme for stability)
                 aSegment = 0.75*aSegment+0.25*aip1Segment;
-                
-                % compute new iterant a'; method on BS did not result in
-                % proper results
-                kappap = sigmaR.*cAz./(4*sin(phiSegment).*cos(phiSegment));
-                % aprime_{i+1} and prandtl correction
-                apip1Segment = kappap./(1-kappap)./fTotSegment;
                 % update aprime
                 apSegment = 0.75 * apSegment + 0.25 * apip1Segment;
                 
@@ -256,7 +258,7 @@ classdef BEMSolver
             % power coefficient
 %             CPSegment = AxSegment .* apSegment .* dR .* obj.nBlades .* ...
 %                 obj.rRotor .* obj.Omega ./ (0.5 * obj.uInf^3 .* pi .* ...
-%                 obj.rRotor;
+%                 obj.rRotor.^2;
             CPSegment = 4 .* apSegment .* (1-aSegment).^2;
             
             % store final result in corresponding property
