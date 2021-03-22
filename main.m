@@ -214,8 +214,8 @@ solver=solver.init();
 solverS30=solver.solveStreamtube();
 
 [t,r]=meshgrid(solverS0.psiSegment,solverS0.rR);
-x = r.*cos(t);
-y = r.*sin(t);
+x = r.*sin(t);
+y = r.*cos(t);
 
 % Total thrust
 % sum(mean(solverS0.Ax,2))
