@@ -25,6 +25,7 @@ solver = solver.solveStreamtube();
 % ylabel('T (N)')
 % xlim([0,21])
 % grid on
+% set(gcf,'color','w')
 % export_fig 'plot_convergence.png'
 
 % figure(2)
@@ -64,6 +65,7 @@ solver = solver.solveStreamtube();
 % ylabel('C_T (-)')
 % legend('Equal spacing', 'Cosine spacing','Location','south')
 % grid on
+% set(gcf,'color','w')
 % export_fig 'plot_spacing.png'
 
 % solver = BEMSolver;
@@ -85,6 +87,7 @@ solver = solver.solveStreamtube();
 % xlabel('r/R (-)')
 % ylabel('f (-)')
 % grid on
+% set(gcf,'color','w')
 % export_fig 'plot_tipcorr.png'
 
 % figure(5) % made nondimensional with (np.pi*Uinf**2/(NBlades*Omega)
@@ -94,6 +97,7 @@ solver = solver.solveStreamtube();
 % xlabel('r/R (-)')
 % ylabel('\Gamma (-)')
 % grid on
+% set(gcf,'color','w')
 % export_fig 'plot_circ.png'
 
 % figure(6)
@@ -108,6 +112,8 @@ solver = solver.solveStreamtube();
 % xlabel('r/R (-)')
 % ylabel('h_s (J/kg)')
 % ylim([min(min(data(4,:)))*0.99,max(data(:,1))*1.01])
+% grid on
+% set(gcf,'color','w')
 % export_fig 'plot_enthalpy.png'
 
 
@@ -125,6 +131,16 @@ solver.TSR=10;
 solver=solver.init();
 solver10=solver.solveStreamtube();
 
+% Total Thrust
+% sum(mean(solver6.Ax,2))
+% sum(mean(solver8.Ax,2))
+% sum(mean(solver10.Ax,2))
+
+% Total torque
+% sum(mean(solver6.Az*solver6.rR*50,2))
+% sum(mean(solver8.Az*solver8.rR*50,2))
+% sum(mean(solver10.Az*solver10.rR*50,2))
+
 % figure(1)
 % hold on
 % plot(solver6.rR, mean(solver6.alpha,2)*180/pi, solver6.rR, mean(solver6.phi,2)*180/pi,'--');
@@ -134,6 +150,7 @@ solver10=solver.solveStreamtube();
 % ylabel('angle (deg)')
 % legend('\alpha_{TSR=6}', "\phi_{TSR=6}",'\alpha_{TSR=8}','\phi_{TSR=8}','\alpha_{TSR=10}','\phi_{TSR=10}')
 % grid on
+% set(gcf,'color','w')
 % export_fig 'TSR_Alpha.png'
 
 % figure(2)
@@ -145,6 +162,7 @@ solver10=solver.solveStreamtube();
 % ylabel('Induced velocity factor (-)')
 % legend('a_{TSR=6}', "a'_{TSR=6}",'a_{TSR=8}', "a'_{TSR=8}",'a_{TSR=10}', "a'_{TSR=10}")
 % grid on
+% set(gcf,'color','w')
 % export_fig 'TSR_a.png'
 
 % figure(3)
@@ -156,6 +174,7 @@ solver10=solver.solveStreamtube();
 % ylabel('C (-)')
 % legend('C_T_{,TSR=6}', 'C_Q_{,TSR=6}', 'C_N_{,TSR=6}','C_T_{,TSR=8}', 'C_Q_{,TSR=8}', 'C_N_{,TSR=8}','C_T_{,TSR=10}', 'C_Q_{,TSR=10}', 'C_N_{,TSR=10}','Location','eastoutside')
 % grid on
+% set(gcf,'color','w')
 % export_fig 'TSR_C.png'
 
 % figure(4)
@@ -167,6 +186,7 @@ solver10=solver.solveStreamtube();
 % ylabel('F (N)')
 % legend('F_{ax,TSR=6}','F_{t,TSR=6}','F_{ax,TSR=8}','F_{t,TSR=8}','F_{ax,TSR=10}','F_{t,TSR=10}','Location','northwest')
 % grid on
+% set(gcf,'color','w')
 % export_fig 'TSR_F.png'
 
 %% Plots for Skew
@@ -197,12 +217,22 @@ solverS30=solver.solveStreamtube();
 x = r.*cos(t);
 y = r.*sin(t);
 
-% figure(1)
+% Total thrust
+% sum(mean(solverS0.Ax,2))
+% sum(mean(solverS15.Ax,2))
+% sum(mean(solverS30.Ax,2))
+
+% Total torque
+% sum(mean(solverS0.Az*solverS0.rR*50,2))
+% sum(mean(solverS15.Az*solverS15.rR*50,2))
+% sum(mean(solverS30.Az*solverS30.rR*50,2))
+
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, rad2deg(solverS0.alpha));
 % h=colorbar;
-% ylabel(h,'\alpha','Rotation',0,'FontSize',14)
+% xlabel(h,'\alpha','Rotation',0,'FontSize',18)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
@@ -214,7 +244,7 @@ y = r.*sin(t);
 % nexttile
 % pplot = pcolor(x, y, rad2deg(solverS15.alpha));
 % h=colorbar;
-% ylabel(h,'\alpha','Rotation',0,'FontSize',14)
+% ylabel(h,'\alpha','Rotation',0,'FontSize',18)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
@@ -225,18 +255,19 @@ y = r.*sin(t);
 % nexttile
 % pplot = pcolor(x, y, rad2deg(solverS30.alpha));
 % h=colorbar;
-% ylabel(h,'\alpha','Rotation',0,'FontSize',14)
+% ylabel(h,'\alpha','Rotation',0,'FontSize',18)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
 % set(pplot, "edgeColor", "none");
 % colormap('default')
-% title('\gamma = 30', 'FontSize',17)
+% title('\gamma = 30', 'FontSize',16)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_angles.png'
 
-% figure(2)
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, rad2deg(solverS0.phi));
@@ -273,9 +304,10 @@ y = r.*sin(t);
 % title('\gamma = 30', 'FontSize',16)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_phi'
 
-% figure(3)
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, solverS0.a);
@@ -312,9 +344,10 @@ y = r.*sin(t);
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_a.png'
 
-% figure(4)
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, solverS0.aprime);
@@ -351,9 +384,10 @@ y = r.*sin(t);
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_at.png'
 
-% figure(5)
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, solverS0.CT);
@@ -390,9 +424,10 @@ y = r.*sin(t);
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_CT.png'
 
-% figure(6)
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, solverS0.CN);
@@ -420,7 +455,7 @@ y = r.*sin(t);
 % nexttile
 % pplot = pcolor(x, y, solverS30.CN);
 % h=colorbar;
-% ylabel(h,'C_N','Rotation',0,'FontSize',14)
+% ylabel(h,'C_N','Rotation',0)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
@@ -429,9 +464,10 @@ y = r.*sin(t);
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_CN.png'
 
-% figure(7)
+% figure("defaultAxesFontSize", 18)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = pcolor(x, y, solverS0.Cq);
@@ -468,6 +504,7 @@ y = r.*sin(t);
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
+% set(gcf,'color','w')
 % export_fig 'SKEW_CQ.png'
 
 %% post-process solverults
