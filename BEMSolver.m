@@ -207,7 +207,7 @@ classdef BEMSolver
                 AzSegment = cAz.*0.5.*chord.*uPer.^2.*dR*obj.nBlades;
                 % thrust coefficient
                 CTSegment = AxSegment ./ (0.5*areaSegment*obj.uInf^2);                  
-                
+
                 % FLOW FACTORS
                 % local solidity
                 sigmaR = obj.nBlades*chord ./ (2*pi*obj.rR*obj.rRotor);
@@ -257,10 +257,10 @@ classdef BEMSolver
             % normal coefficient
             CNSegment = CQSegment ./ obj.rR;
             % power coefficient
-%             CPSegment = AxSegment .* apSegment .* dR .* obj.nBlades .* ...
-%                 obj.rRotor .* obj.Omega ./ (0.5 * obj.uInf^3 .* pi .* ...
-%                 obj.rRotor.^2;
-            CPSegment = 4 .* apSegment .* (1-aSegment).^2;
+            CPSegment = AxSegment .* apSegment .* obj.rR .* obj.nBlades .* ...
+                obj.rRotor .* obj.Omega ./ (0.5 * obj.uInf^3 .* pi .* ...
+                obj.rRotor.^2);
+%             CPSegment = 4 .* apSegment .* (1-aSegment).^2;
             
             % store final result in corresponding property
             obj.areaAnnulus = areaSegment;
