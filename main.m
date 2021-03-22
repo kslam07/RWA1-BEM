@@ -535,29 +535,30 @@ y = r.*cos(t);
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_CQ.png'
-chordS15 = solverS15.computeChordLength(solverS15.rR);
-figure("defaultAxesFontSize", 18)
-tiledlayout(1,2, "TileSpacing", "compact",'Padding', 'none')
-ax1=nexttile;
-hold on
-plot(chordS15, mean(solverS0.Cl, 2), "linewidth", 1.5)
-plot(chordS15, mean(solverS15.Cl, 2), "linewidth", 1.5)
-plot(chordS15, mean(solverS30.Cl, 2), "linewidth", 1.5)
-legend("$\gamma=0$", "$\gamma=15$", "$\gamma=30$", "interpreter", "latex")
-set(gca, 'XDir','reverse')
-xlabel("chord length [m]")
-ylabel("$C_{L}$", "interpreter", "latex")
-grid
-ax2=nexttile;
-hold on 
-plot(polarData(:,3), polarData(:,2), "linewidth", 1.5)
-scatter(LDpoint(3), LDpoint(2), 50, "Marker", 'x', "lineWidth", 2.5)
-legend("Airfoil polar", "Max. L/D")
-grid
-xlabel("$C_{D}$ [-]", "interpreter", "latex")
-ylabel("$C_{L}$", "interpreter", "latex")
-set(gcf,'color','w');
-linkaxes([ax1 ax2], "y")
+
+% chordS15 = solverS15.computeChordLength(solverS15.rR);
+% figure("defaultAxesFontSize", 18)
+% tiledlayout(1,2, "TileSpacing", "compact",'Padding', 'none')
+% ax1=nexttile;
+% hold on
+% plot(chordS15, mean(solverS0.Cl, 2), "linewidth", 1.5)
+% plot(chordS15, mean(solverS15.Cl, 2), "linewidth", 1.5)
+% plot(chordS15, mean(solverS30.Cl, 2), "linewidth", 1.5)
+% legend("$\gamma=0$", "$\gamma=15$", "$\gamma=30$", "interpreter", "latex")
+% set(gca, 'XDir','reverse')
+% xlabel("chord length [m]")
+% ylabel("$C_{L}$", "interpreter", "latex")
+% grid
+% ax2=nexttile;
+% hold on 
+% plot(polarData(:,3), polarData(:,2), "linewidth", 1.5)
+% scatter(LDpoint(3), LDpoint(2), 50, "Marker", 'x', "lineWidth", 2.5)
+% legend("Airfoil polar", "Max. L/D")
+% grid
+% xlabel("$C_{D}$ [-]", "interpreter", "latex")
+% ylabel("$C_{L}$", "interpreter", "latex")
+% set(gcf,'color','w');
+% linkaxes([ax1 ax2], "y")
 %% post-process solverults
 % figure
 % plot(solver.rR, rad2deg(solver.alpha), "linewidth", 1.3);
