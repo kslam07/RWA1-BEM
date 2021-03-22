@@ -116,20 +116,49 @@ solver = solver.solveStreamtube();
 % set(gcf,'color','w')
 % export_fig 'plot_enthalpy.png'
 
+% plot CL as function of chord distribution
+
+% compute chord length at each rR
+chordTSR = solver8.computeChordLength(solver6.rR);
+polarData = table2array(readtable("polar_DU95W180.xlsx"));
+LDpoint = polarData(polarData(:,2) == max(polarData(:,2)), :);
+
+figure("defaultAxesFontSize", 18)
+tiledlayout(1,2, "TileSpacing", "compact",'Padding', 'none')
+ax1=nexttile;
+hold on
+plot(chordTSR, solver6.Cl(:,1), "linewidth", 1.5)
+plot(chordTSR, solver8.Cl(:,1), "linewidth", 1.5)
+plot(chordTSR, solver10.Cl(:,1), "linewidth", 1.5)
+legend("$\lambda=6$", "$\lambda=8$", "$\lambda=10$", "interpreter", "latex")
+set(gca, 'XDir','reverse')
+xlabel("chord length [m]")
+ylabel("$C_{L}$", "interpreter", "latex")
+grid
+ax2=nexttile;
+hold on 
+plot(polarData(:,3), polarData(:,2), "linewidth", 1.5)
+scatter(LDpoint(3), LDpoint(2), 50, "Marker", 'x', "lineWidth", 2.5)
+legend("Airfoil polar", "Max. L/D")
+grid
+xlabel("$C_{D}$ [-]", "interpreter", "latex")
+ylabel("$C_{L}$", "interpreter", "latex")
+set(gcf,'color','w');
+linkaxes([ax1 ax2], "y")
 
 %% Plots for TSR
 
-solver.TSR=6;
-solver=solver.init();
-solver6=solver.solveStreamtube();
-
-solver.TSR=8;
-solver=solver.init();
-solver8=solver.solveStreamtube();
-
-solver.TSR=10;
-solver=solver.init();
-solver10=solver.solveStreamtube();
+% solver.TSR=6;
+% solver=solver.init();
+% solver6=solver.solveStreamtube();
+% 
+% solver.TSR=8;
+% solver=solver.init();
+% solver8=solver.solveStreamtube();
+% 
+% solver.TSR=10;
+% solver=solver.init();
+% solver10=solver.solveStreamtube();
 
 % Total Thrust
 % sum(mean(solver6.Ax,2))
@@ -194,12 +223,12 @@ solver10=solver.solveStreamtube();
 solver = BEMSolver;
 solver.nBlades = 3;
 solver.TSR = 8;
-solver.nAnnulus = 50;
+solver.nAnnulus = 100;
 solver.spacing = "0";
 solver.atol = 1e-4;
 solver.nIter = 100;
 solver.bladePitch = -2;
-solver.nPsi = 50;
+solver.nPsi = 100;
 solver.yawAngle = 0;
 solver.uInf = 10;
 solver = solver.init();
@@ -506,7 +535,29 @@ y = r.*cos(t);
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_CQ.png'
-
+chordS15 = solverS15.computeChordLength(solverS15.rR);
+figure("defaultAxesFontSize", 18)
+tiledlayout(1,2, "TileSpacing", "compact",'Padding', 'none')
+ax1=nexttile;
+hold on
+plot(chordS15, mean(solverS0.Cl, 2), "linewidth", 1.5)
+plot(chordS15, mean(solverS15.Cl, 2), "linewidth", 1.5)
+plot(chordS15, mean(solverS30.Cl, 2), "linewidth", 1.5)
+legend("$\gamma=0$", "$\gamma=15$", "$\gamma=30$", "interpreter", "latex")
+set(gca, 'XDir','reverse')
+xlabel("chord length [m]")
+ylabel("$C_{L}$", "interpreter", "latex")
+grid
+ax2=nexttile;
+hold on 
+plot(polarData(:,3), polarData(:,2), "linewidth", 1.5)
+scatter(LDpoint(3), LDpoint(2), 50, "Marker", 'x', "lineWidth", 2.5)
+legend("Airfoil polar", "Max. L/D")
+grid
+xlabel("$C_{D}$ [-]", "interpreter", "latex")
+ylabel("$C_{L}$", "interpreter", "latex")
+set(gcf,'color','w');
+linkaxes([ax1 ax2], "y")
 %% post-process solverults
 % figure
 % plot(solver.rR, rad2deg(solver.alpha), "linewidth", 1.3);
