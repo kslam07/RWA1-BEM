@@ -194,8 +194,8 @@ solver=solver.init();
 solverS30=solver.solveStreamtube();
 
 [t,r]=meshgrid(solverS0.psiSegment,solverS0.rR);
-x = r.*cos(t);
-y = r.*sin(t);
+x = r.*sin(t);
+y = r.*cos(t);
 
 % figure(1)
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
