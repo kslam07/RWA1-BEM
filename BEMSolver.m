@@ -253,7 +253,7 @@ classdef BEMSolver
             
             % compute other parameters
             % torque coefficient
-            CQSegment = AzSegment ./ (0.5*areaSegment*obj.uInf^2);
+            CQSegment = AzSegment.*obj.rR./ (0.5*areaSegment*obj.uInf^2);
             % normal coefficient
             CNSegment = CQSegment ./ obj.rR;
             % power coefficient
