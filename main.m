@@ -3,12 +3,12 @@
 solver = BEMSolver;
 solver.nBlades = 3;
 solver.TSR = 8;
-solver.nAnnulus = 50;
+solver.nAnnulus = 100;
 solver.spacing = "0";
 solver.atol = 1e-4;
 solver.nIter = 100;
 solver.bladePitch = -2;
-solver.nPsi = 50;
+solver.nPsi = 100;
 solver.yawAngle = 0;
 solver.uInf = 10;
 
@@ -100,21 +100,22 @@ solver = solver.solveStreamtube();
 % set(gcf,'color','w')
 % export_fig 'plot_circ.png'
 
-% figure(6)
-% data=enthalpy(solver);
-% hold on
-% plot(solver.rR,data(1,:),'HandleVisibility','off')
-% plot(solver.rR,data(2,:),'DisplayName','Station 1 & 2')
-% plot(solver.rR,data(3,:),'HandleVisibility','off')
-% plot(solver.rR,data(4,:),'DisplayName','Station 3')
-% plot(solver.rR,data(5,:),'DisplayName','Station 4')
-% legend()
-% xlabel('r/R (-)')
-% ylabel('h_s (J/kg)')
-% ylim([min(min(data(4,:)))*0.99,max(data(:,1))*1.01])
-% grid on
-% set(gcf,'color','w')
-% export_fig 'plot_enthalpy.png'
+figure("defaultAxesFontSize", 18)
+[data, R1, R2, R3, R4] =enthalpy(solver);
+hold on
+plot(R1*solver.rR,data(1,:),'DisplayName', "Station 1", "Marker", 'o', ...
+    "markerIndices", 1:5:length(solver.rR))
+plot(R2*solver.rR,data(2,:),'DisplayName','Station 2')
+plot(R3*solver.rR,data(3,:),'DisplayName','Station 3')
+plot(R4*solver.rR,data(4,:),'DisplayName','Station 4')
+% plot(R4*solver.rR,data(5,:),'DisplayName','Station 4')
+legend()
+xlabel('R (-)')
+ylabel('h_s (J/kg)')
+ylim([min(min(data(4,:)))*0.99,max(data(:,1))*1.01])
+grid on
+set(gcf,'color','w')
+export_fig 'plot_enthalpy.png'
 
 %% Plots for TSR
 
@@ -223,10 +224,10 @@ solver10=solver.solveStreamtube();
 solver = BEMSolver;
 solver.nBlades = 3;
 solver.TSR = 8;
-solver.nAnnulus = 500;
+solver.nAnnulus = 100;
 solver.spacing = "0";
 solver.atol = 1e-4;
-solver.nIter = 1000;
+solver.nIter = 100;
 solver.bladePitch = -2;
 solver.nPsi = 100;
 solver.yawAngle = 0;
@@ -257,10 +258,14 @@ y = r.*cos(t);
 % sum(mean(solverS30.Az*solverS30.rR*50,2))
 
 % figure("defaultAxesFontSize", 18)
+% minVal = min([solverS0.alpha(:); solverS15.alpha(:); solverS30.alpha(:)]);
+% maxVal = max([solverS0.alpha(:); solverS15.alpha(:); solverS30.alpha(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
 % pplot = contourf(x, y, rad2deg(solverS0.alpha));
 % h=colorbar;
+% caxis manual
+% caxis([rad2deg(minVal), rad2deg(maxVal)])
 % xlabel(h,'\alpha','Rotation',0,'FontSize',18)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
@@ -271,6 +276,8 @@ y = r.*cos(t);
 % nexttile
 % pplot = contourf(x, y, rad2deg(solverS15.alpha));
 % h=colorbar;
+% caxis manual
+% caxis([rad2deg(minVal), rad2deg(maxVal)])
 % ylabel(h,'\alpha','Rotation',0,'FontSize',18)
 % xlabel('x/R (-)', 'FontSize',17)
 % grid on
@@ -278,6 +285,8 @@ y = r.*cos(t);
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
+% caxis manual
+% caxis([rad2deg(minVal), rad2deg(maxVal)])
 % pplot = contourf(x, y, rad2deg(solverS30.alpha));
 % h=colorbar;
 % ylabel(h,'\alpha','Rotation',0,'FontSize',18)
@@ -289,240 +298,288 @@ y = r.*cos(t);
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_angles.png'
-
+% 
 % figure("defaultAxesFontSize", 18)
+% minVal = min([solverS0.phi(:); solverS15.phi(:); solverS30.phi(:)]);
+% maxVal = max([solverS0.phi(:); solverS15.phi(:); solverS30.phi(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
-% pplot = pcolor(x, y, rad2deg(solverS0.phi));
+% pplot = contourf(x, y, rad2deg(solverS0.phi));
 % h=colorbar;
+% caxis manual
+% caxis([rad2deg(minVal), rad2deg(maxVal)])
 % ylabel(h,'\phi','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 0', 'FontSize',17)
 % % colormap("summer")
 % axis square
 % nexttile
-% pplot = pcolor(x, y, rad2deg(solverS15.phi));
+% pplot = contourf(x, y, rad2deg(solverS15.phi));
 % h=colorbar;
+% caxis manual
+% caxis([rad2deg(minVal), rad2deg(maxVal)])
 % ylabel(h,'\phi','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
-% pplot = pcolor(x, y, rad2deg(solverS30.phi));
+% pplot = contourf(x, y, rad2deg(solverS30.phi));
 % h=colorbar;
+% caxis manual
+% caxis([rad2deg(minVal), rad2deg(maxVal)])
 % ylabel(h,'\phi','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 30', 'FontSize',16)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_phi'
-
+% 
 % figure("defaultAxesFontSize", 18)
+% minVal = 0; %min([solverS0.a(:); solverS15.a(:); solverS30.a(:)]);
+% maxVal = 0.6; %max([solverS0.a(:); solverS15.a(:); solverS30.a(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
-% pplot = pcolor(x, y, solverS0.a);
+% pplot = contourf(x, y, solverS0.a);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'a','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 0', 'FontSize',17)
 % % colormap("summer")
 % axis square
 % nexttile
-% pplot = pcolor(x, y, solverS15.a);
+% pplot = contourf(x, y, solverS15.a);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'a','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
-% pplot = pcolor(x, y, solverS30.a);
+% pplot = contourf(x, y, solverS30.a);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'a','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_a.png'
-
+% 
 % figure("defaultAxesFontSize", 18)
+% minVal = min([solverS0.aprime(:); solverS15.aprime(:); solverS30.aprime(:)]);
+% maxVal = max([solverS0.aprime(:); solverS15.aprime(:); solverS30.aprime(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
-% pplot = pcolor(x, y, solverS0.aprime);
+% pplot = contourf(x, y, solverS0.aprime);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,"a'",'Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 0', 'FontSize',17)
 % % colormap("summer")
 % axis square
 % nexttile
-% pplot = pcolor(x, y, solverS15.aprime);
+% pplot = contourf(x, y, solverS15.aprime);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,"a'",'Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
-% pplot = pcolor(x, y, solverS30.aprime);
+% pplot = contourf(x, y, solverS30.aprime);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,"a'",'Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_at.png'
-
+% 
 % figure("defaultAxesFontSize", 18)
+% minVal = min([solverS0.CT(:); solverS15.CT(:); solverS30.CT(:)]);
+% maxVal = max([solverS0.CT(:); solverS15.CT(:); solverS30.CT(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
-% pplot = pcolor(x, y, solverS0.CT);
+% pplot = contourf(x, y, solverS0.CT);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_T','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma=0', 'FontSize',17)
 % % colormap("summer")
 % axis square
 % nexttile
-% pplot = pcolor(x, y, solverS15.CT);
+% pplot = contourf(x, y, solverS15.CT);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_T','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
-% pplot = pcolor(x, y, solverS30.CT);
+% pplot = contourf(x, y, solverS30.CT);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_T','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_CT.png'
-
+% 
 % figure("defaultAxesFontSize", 18)
+% minVal = min([solverS0.CN(:); solverS15.CN(:); solverS30.CN(:)]);
+% maxVal = max([solverS0.CN(:); solverS15.CN(:); solverS30.CN(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
-% pplot = pcolor(x, y, solverS0.CN);
+% pplot = contourf(x, y, solverS0.CN);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_N','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 0', 'FontSize',17)
 % % colormap("summer")
 % axis square
 % nexttile
-% pplot = pcolor(x, y, solverS15.CN);
+% pplot = contourf(x, y, solverS15.CN);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_N','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
-% pplot = pcolor(x, y, solverS30.CN);
+% pplot = contourf(x, y, solverS30.CN);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_N','Rotation',0)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 30', 'FontSize',17)
 % axis square
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_CN.png'
-
+% 
 % figure("defaultAxesFontSize", 18)
+% minVal = min([solverS0.Cq(:); solverS15.Cq(:); solverS30.Cq(:)]);
+% maxVal = max([solverS0.Cq(:); solverS15.Cq(:); solverS30.Cq(:)]);
 % t1 = tiledlayout(1,3,'TileSpacing','Compact','Padding','Compact');
 % nexttile
-% pplot = pcolor(x, y, solverS0.Cq);
+% pplot = contourf(x, y, solverS0.Cq);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_Q','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % ylabel('y/R (-)', 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 0', 'FontSize',17)
 % colormap("summer")
 % axis square
 % nexttile
-% pplot = pcolor(x, y, solverS15.Cq);
+% pplot = contourf(x, y, solverS15.Cq);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_Q','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)',, 'FontSize',17)
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % axis square
 % title('\gamma = 15', 'FontSize',17)
 % nexttile
-% pplot = pcolor(x, y, solverS30.Cq);
+% pplot = contourf(x, y, solverS30.Cq);
 % h=colorbar;
+% caxis manual
+% caxis([minVal, maxVal])
 % ylabel(h,'C_Q','Rotation',0,'FontSize',14)
 % xlabel('x/R (-)', 'FontSize',17)
 % % ylabel('y/R (-)')
 % grid on
-% set(pplot, "edgeColor", "none");
+% % set(pplot, "edgeColor", "none");
 % colormap('default')
 % title('\gamma = 30', 'FontSize',17)
 % axis square

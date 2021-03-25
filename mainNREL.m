@@ -2,8 +2,8 @@
 %  do this instead
 solver = BEMSolverNREL;
 solver.nBlades = 3;
-solver.TSR = 6;
-solver.nAnnulus = 50;
+solver.TSR = 8;
+solver.nAnnulus = 100;
 solver.spacing = "0";
 solver.atol = 1e-4;
 solver.nIter = 100;
@@ -38,12 +38,12 @@ solver = solver.solveStreamtube();
 % grid
 
 %% Plots for report
-figure(1)
-plot(solver.rR, mean(solver.alpha,2)*180/pi, solver.rR, mean(solver.phi,2)*180/pi);
-xlabel('r/R (-)')
-ylabel('angle (deg)')
-legend('\alpha', "\phi")
-grid on
+% figure(1)
+% plot(solver.rR, mean(solver.alpha,2)*180/pi, solver.rR, mean(solver.phi,2)*180/pi);
+% xlabel('r/R (-)')
+% ylabel('angle (deg)')
+% legend('\alpha', "\phi")
+% grid on
 
 % figure(2)
 % plot(solver.rR, mean(solver.a,2), solver.rR, mean(solver.aprime,2));
