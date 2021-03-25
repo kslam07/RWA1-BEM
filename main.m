@@ -100,22 +100,22 @@ solver = solver.solveStreamtube();
 % set(gcf,'color','w')
 % export_fig 'plot_circ.png'
 
-figure("defaultAxesFontSize", 18)
-[data, R1, R2, R3, R4] =enthalpy(solver);
-hold on
-plot(R1*solver.rR,data(1,:),'DisplayName', "Station 1", "Marker", 'o', ...
-    "markerIndices", 1:5:length(solver.rR))
-plot(R2*solver.rR,data(2,:),'DisplayName','Station 2')
-plot(R3*solver.rR,data(3,:),'DisplayName','Station 3')
-plot(R4*solver.rR,data(4,:),'DisplayName','Station 4')
-% plot(R4*solver.rR,data(5,:),'DisplayName','Station 4')
-legend()
-xlabel('R (-)')
-ylabel('h_s (J/kg)')
-ylim([min(min(data(4,:)))*0.99,max(data(:,1))*1.01])
-grid on
-set(gcf,'color','w')
-export_fig 'plot_enthalpy.png'
+% figure("defaultAxesFontSize", 18)
+% [data, R1, R2, R3, R4] =enthalpy(solver);
+% hold on
+% plot(R1*solver.rR,data(1,:),'DisplayName', "Station 1", "Marker", 'o', ...
+%     "markerIndices", 1:5:length(solver.rR))
+% plot(R2*solver.rR,data(2,:),'DisplayName','Station 2')
+% plot(R3*solver.rR,data(3,:),'DisplayName','Station 3')
+% plot(R4*solver.rR,data(4,:),'DisplayName','Station 4')
+% % plot(R4*solver.rR,data(5,:),'DisplayName','Station 4')
+% legend()
+% xlabel('R (-)')
+% ylabel('h_s (J/kg)')
+% ylim([min(min(data(4,:)))*0.99,max(data(:,1))*1.01])
+% grid on
+% set(gcf,'color','w')
+% export_fig 'plot_enthalpy.png'
 
 %% Plots for TSR
 
@@ -132,14 +132,14 @@ solver=solver.init();
 solver10=solver.solveStreamtube();
 
 % Total Thrust
-% sum(mean(solver6.Ax,2))
-% sum(mean(solver8.Ax,2))
-% sum(mean(solver10.Ax,2))
+% sum(mean(solver6.Ax*1.225,2))
+% sum(mean(solver8.Ax*1.225,2))
+% sum(mean(solver10.Ax*1.225,2))
 
 % Total torque
-% sum(mean(solver6.Az*solver6.rR*50,2))
-% sum(mean(solver8.Az*solver8.rR*50,2))
-% sum(mean(solver10.Az*solver10.rR*50,2))
+% sum(mean(solver6.Az.*solver6.rR * solver6.rRotor, 2)) * 1.225
+% sum(mean(solver8.Az.*solver8.rR * solver8.rRotor, 2)) * 1.225
+% sum(mean(solver10.Az.*solver10.rR * solver10.rRotor, 2)) * 1.225
 
 % figure(1)
 % hold on
@@ -248,14 +248,15 @@ x = r.*sin(t);
 y = r.*cos(t);
 
 % Total thrust
-% sum(mean(solverS0.Ax,2))
-% sum(mean(solverS15.Ax,2))
-% sum(mean(solverS30.Ax,2))
+% sum(mean(solverS0.Ax,2)) * 1.225
+% sum(mean(solverS15.Ax,2)) * 1.225
+% sum(mean(solverS30.Ax,2)) * 1.225
 
 % Total torque
-% sum(mean(solverS0.Az*solverS0.rR*50,2))
-% sum(mean(solverS15.Az*solverS15.rR*50,2))
-% sum(mean(solverS30.Az*solverS30.rR*50,2))
+% sum(mean(solverS0.Az.*solverS0.rR * solverS0.rRotor, 2)) * 1.225
+% sum(mean(solverS15.Az.*solverS15.rR * solverS15.rRotor, 2)) * 1.225
+% sum(mean(solverS30.Az.*solverS30.rR * solverS30.rRotor, 2)) * 1.225
+
 
 % figure("defaultAxesFontSize", 18)
 % minVal = min([solverS0.alpha(:); solverS15.alpha(:); solverS30.alpha(:)]);
@@ -298,7 +299,7 @@ y = r.*cos(t);
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_angles.png'
-% 
+
 % figure("defaultAxesFontSize", 18)
 % minVal = min([solverS0.phi(:); solverS15.phi(:); solverS30.phi(:)]);
 % maxVal = max([solverS0.phi(:); solverS15.phi(:); solverS30.phi(:)]);
@@ -538,7 +539,7 @@ y = r.*cos(t);
 % set(gcf, 'Position', get(0, 'Screensize'));
 % set(gcf,'color','w')
 % export_fig 'SKEW_CN.png'
-% 
+
 % figure("defaultAxesFontSize", 18)
 % minVal = min([solverS0.Cq(:); solverS15.Cq(:); solverS30.Cq(:)]);
 % maxVal = max([solverS0.Cq(:); solverS15.Cq(:); solverS30.Cq(:)]);
