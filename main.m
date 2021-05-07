@@ -27,6 +27,8 @@ for i = 1:length(fn)
     
 end
 
+b = mean(solver.alpha, 2)
+
 save('BEM_data.mat', '-struct', 'data', '-v7.3');
 
 
