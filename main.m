@@ -18,6 +18,18 @@ solver = solver.init();
 %% run the BEM
 solver = solver.solveStreamtube();
 
+%% save data for assingment 2 in Python
+fn = fieldnames(solver);
+
+for i = 1:length(fn)
+    
+    data.(fn{i}) = solver.(fn{i});
+    
+end
+
+save('BEM_data.mat', '-struct', 'data', '-v7.3');
+
+
 %% General plots
 % figure(1)
 % plot(squeeze(sum(solver.thrustIter(:,2,:),1))) % might need to add cutoff for plot
